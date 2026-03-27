@@ -795,17 +795,28 @@ def _map_halls(conn: dict) -> list[str]:
     halls = set()
     if src_dh:
         halls.add(src_dh)
+    else:
+        # No elevation data — check switch name suffix (e.g. L20.1.1-DH2)
+        name = conn.get("src_name", "")
+        if "DH2" in name:
+            halls.add("DH2")
+        elif "DH1" in name:
+            halls.add("DH1")
     if dest_dh:
         halls.add(dest_dh)
+    else:
+        name = conn.get("dest_name", "")
+        if "DH2" in name:
+            halls.add("DH2")
+        elif "DH1" in name:
+            halls.add("DH1")
 
     if not halls:
-        # Fallback to data_hall field
         dh = conn.get("data_hall", "")
         if dh in ("DH1", "DH2"):
             return [dh]
         return ["DH1"]
 
-    # Sort so DH1 always first
     return sorted(halls)
 
 
@@ -859,13 +870,20 @@ def _draw_elevation(conn: dict, searched: str = ""):
 
     print()
     sides = []
+    no_elev_note = []
     if src_elev:
         src_cab = conn.get("src_cab", "")
         sides.append(_render_rack(src_elev["rack"], src_cab, conn["src_name"]))
+    else:
+        cab = conn.get("src_cab", "")
+        no_elev_note.append(f"{conn['src_name']}{f' (Cab{cab})' if cab else ''}")
     if dest_elev:
         dest_cab = conn.get("dest_cab", "")
         if not src_elev or dest_elev["rack"] != src_elev["rack"]:
             sides.append(_render_rack(dest_elev["rack"], dest_cab, conn["dest_name"]))
+    else:
+        cab = conn.get("dest_cab", "")
+        no_elev_note.append(f"{conn['dest_name']}{f' (Cab{cab})' if cab else ''}")
 
     _ansi_re = re.compile(r'\033\[[0-9;]*m')
 
@@ -883,6 +901,9 @@ def _draw_elevation(conn: dict, searched: str = ""):
     elif sides:
         for line in sides[0]:
             print(line)
+    if no_elev_note:
+        for name in no_elev_note:
+            print(f"  {DIM}{name} — no rack elevation data (leaf switches not in ELEV tabs){RESET}")
     print()
 
 
@@ -922,10 +943,9 @@ def _detail_prompt(conn: dict):
             halls = _map_halls(conn)
             src_elev = _ELEVATIONS.get(conn["src_name"].upper())
             dest_elev = _ELEVATIONS.get(conn["dest_name"].upper())
-            src_dh = src_elev["dh"] if src_elev and src_elev.get("dh") else None
-            dest_dh = dest_elev["dh"] if dest_elev and dest_elev.get("dh") else None
+            src_dh = src_elev["dh"] if src_elev and src_elev.get("dh") else ("DH2" if "DH2" in conn["src_name"] else "DH1" if "DH1" in conn["src_name"] else None)
+            dest_dh = dest_elev["dh"] if dest_elev and dest_elev.get("dh") else ("DH2" if "DH2" in conn["dest_name"] else "DH1" if "DH1" in conn["dest_name"] else None)
             for lk in halls:
-                # Only highlight switches that are physically in this hall
                 ha = rack_a if (src_dh == lk or src_dh is None) else None
                 hb = rack_b if (dest_dh == lk or dest_dh is None) else None
                 la = conn["src_name"] if ha else ""
