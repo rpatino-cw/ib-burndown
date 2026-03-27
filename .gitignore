@@ -1,0 +1,4 @@
+*.xlsx
+.ib_lookup_cache.json
+__pycache__/
+.venv/
