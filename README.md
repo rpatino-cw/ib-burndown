@@ -12,17 +12,23 @@
 
 ## Get started
 
-**3 steps. That's it.**
+<img src="assets/setup-tutorial.gif" alt="Setup tutorial" width="600">
 
 ```bash
-git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown && pip3 install -e .
-```
+# 1. Clone
+git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown
 
-Download the [IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) (File > Download > .xlsx) and drop it in the folder.
+# 2. Install
+pip3 install -e .
 
-```bash
+# 3. Load the IB Sketch (drag xlsx into terminal)
+./load.sh
+
+# 4. Search
 ib-lookup
 ```
+
+Download the [IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) as .xlsx and use `./load.sh` to load it.
 
 > Also works with `python3 ib_burndown.py` if you skip the install.
 
