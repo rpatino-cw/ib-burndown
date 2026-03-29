@@ -104,8 +104,7 @@ cp "$FILE" "$TARGET"
 SIZE=$(ls -lh "$TARGET" | awk '{print $5}')
 BASENAME=$(basename "$FILE")
 
-draw_box "success" "$BASENAME" "$SIZE → EVI01 - IB Sketch.xlsx" "Ready to run: ib-lookup <switch>"
+draw_box "success" "$BASENAME" "$SIZE → EVI01 - IB Sketch.xlsx" "Launching ib-lookup..."
 
-printf "  ${DIM}${LGRAY}Run:${RST}\n"
-printf "  ${WHITE}ib-lookup ${AMBER}<switch-name>${RST}\n"
-echo ""
+sleep 1
+exec ib-lookup
