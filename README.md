@@ -21,9 +21,8 @@ cd ib-burndown
 pip3 install -r requirements.txt
 ```
 
-Then drop these two Excel files in the folder (get from IB shared drive or ask Romeo):
+Then drop the IB Sketch in the folder (get from IB shared drive or ask Romeo):
 
-- `DH1 & DH2 All_IB_Connections_Simplified_v2.xlsx`
 - `EVI01 - IB Sketch.xlsx`
 
 ---
