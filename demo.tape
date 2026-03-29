@@ -15,55 +15,32 @@ Set Theme { "name": "EVI01", "black": "#0c0d10", "red": "#c0392b", "green": "#3a
 Set TypingSpeed 50ms
 Set CursorBlink false
 
-# ── Step 1: Clone the repo ──
+# ── Step 1: Clone + install ──
 Sleep 1s
-Type "# Step 1: Clone the repo"
+Type "# Step 1: Clone and install"
 Enter
 Sleep 500ms
-Type "git clone https://github.com/rpatino-cw/ib-burndown.git"
-Enter
-Sleep 3s
-
-Type "cd ib-burndown"
-Enter
-Sleep 500ms
-
-# ── Step 2: Install ──
-Sleep 500ms
-Type "# Step 2: Install (one command)"
-Enter
-Sleep 500ms
-Type "pip3 install -e ."
+Type "git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown && pip3 install -e ."
 Enter
 Sleep 4s
 
-# ── Step 3: Load the IB Sketch ──
+# ── Step 2: Just run it — drop zone appears automatically ──
 Sleep 500ms
-Type "# Step 3: Load the IB Sketch file"
-Enter
-Sleep 500ms
-Type "./load.sh"
-Enter
-Sleep 2s
-
-# Simulate dragging a file (type a path as if Finder dropped it)
-Type "/Users/you/Downloads/EVI01 - IB Sketch.xlsx"
-Enter
-Sleep 2s
-
-# ── Step 4: Run it ──
-Sleep 1s
-Type "# Step 4: Search any switch"
+Type "# Step 2: Run it (drop zone appears if xlsx is missing)"
 Enter
 Sleep 500ms
 Type "ib-lookup"
 Enter
-Sleep 2s
+Sleep 3s
 
-# Type a search
+# Simulate dragging the xlsx file from Finder
+Type "/Users/you/Downloads/EVI01 - IB Sketch.xlsx"
+Enter
+Sleep 3s
+
+# Now searching — type a query
 Type "ibsw-a01"
 Enter
 Sleep 3s
 
-# Done
 Sleep 2s
