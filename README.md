@@ -1,84 +1,57 @@
 <div align="center">
-  <img src="assets/banner.png" alt="ib-burndown" width="600">
-
+  <img src="assets/banner.png" alt="ib-lookup" width="600">
+  <br><br>
+  <b>Search any IB switch at EVI01 from your terminal.</b>
   <br>
-
-  **For you CLI lovers who'd rather grep a switch than open a spreadsheet.**
-
-  Search any InfiniBand connection at EVI01. Type a switch name, get the port, cable, rack, RU, and a floor map. All from your terminal.
-
-  [![License](https://img.shields.io/github/license/rpatino-cw/ib-burndown?style=flat-square)](LICENSE)
-  [![Issues](https://img.shields.io/github/issues/rpatino-cw/ib-burndown?style=flat-square)](https://github.com/rpatino-cw/ib-burndown/issues)
+  Type a name, get the port, cable, rack, and floor map.
+  <br><br>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/rpatino-cw/ib-burndown?style=flat-square" alt="License"></a>
 </div>
 
----
+<br>
 
-## Install
+## Get started
+
+**3 steps. That's it.**
 
 ```bash
-git clone https://github.com/rpatino-cw/ib-burndown.git
-cd ib-burndown
-pip3 install -e .
+git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown && pip3 install -e .
 ```
 
-Then download the IB Sketch and drop it in the folder:
-
-1. **Download:** [EVI01 - IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) &rarr; File > Download > .xlsx
-2. **Drop** `EVI01 - IB Sketch.xlsx` in the `ib-burndown/` folder
-3. **Run it** &mdash; the app will confirm `File found:` on launch
-
----
-
-## Use it
+Download the [IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) (File > Download > .xlsx) and drop it in the folder.
 
 ```bash
 ib-lookup
 ```
 
-Type a switch name and hit enter. That's it.
+> Also works with `python3 ib_burndown.py` if you skip the install.
 
-Also works with `python3 ib_burndown.py` if you skip the install.
+<br>
 
-<img src="assets/demo-search.gif" alt="Searching for a switch connection" width="600">
+## Search
 
-Non-interactive mode for scripting:
+<img src="assets/demo-search.gif" alt="Search for a switch" width="600">
 
-```
-ib-lookup "L10"
-ib-lookup "S5.3.1 20/2"
-ib-lookup "C1.15"
-```
+<br>
 
----
+## Floor map — `m`
 
-## Four modes
+<img src="assets/mode-map.png" alt="Floor map" width="600">
 
-### Search &mdash; *"L10"*
+<br>
 
-Type any switch name, port, or fabric ID. Results show source, destination, tier, and port in one line. Pick a number for the detail view with cable metadata, rack location, and RU position.
+## Rack elevation — `e`
 
-### Floor Map &mdash; *"[m] where is it?"*
+<img src="assets/mode-elevation.png" alt="Rack elevation" width="600">
 
-Press `m` from the detail view. Get an ASCII floor map with both racks highlighted -- `@` for source, `#` for destination. Cross-hall connections render maps for both DH1 and DH2.
+<br>
 
-<img src="assets/mode-map.png" alt="Floor map mode" width="600">
-
-### Rack Elevation &mdash; *"[e] which RU?"*
-
-Press `e` to see the full rack with every switch and its RU position. Highlighted switches get a `◄` marker so you know exactly where to look.
-
-<img src="assets/mode-elevation.png" alt="Rack elevation mode" width="600">
-
-### Troubleshooting &mdash; *"[t] what do I check?"*
-
-Press `t` for step-by-step DCT troubleshooting. Context-aware -- it knows the cable type, optic, port numbers, and rack locations, so the steps are specific to the connection you're looking at.
+## Troubleshooting — `t`
 
 <img src="assets/mode-tips.png" alt="Troubleshooting tips" width="600">
 
+<br>
+
 ---
 
-## Contributing
-
-Fork, PR, no connection data (the Excel files are internal). Keep it simple.
-
-[MIT](LICENSE)
+Fork, PR, no xlsx files (internal data). [MIT](LICENSE)
