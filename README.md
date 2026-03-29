@@ -18,31 +18,35 @@
 ```bash
 git clone https://github.com/rpatino-cw/ib-burndown.git
 cd ib-burndown
-pip3 install -r requirements.txt
+pip3 install -e .
 ```
 
-Then drop the IB Sketch in the folder (get from IB shared drive or ask Romeo):
+Then download the IB Sketch and drop it in the folder:
 
-- `EVI01 - IB Sketch.xlsx`
+1. **Download:** [EVI01 - IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) &rarr; File > Download > .xlsx
+2. **Drop** `EVI01 - IB Sketch.xlsx` in the `ib-burndown/` folder
+3. **Run it** &mdash; the app will confirm `File found:` on launch
 
 ---
 
 ## Use it
 
 ```bash
-python3 ib_burndown.py
+ib-lookup
 ```
 
 Type a switch name and hit enter. That's it.
+
+Also works with `python3 ib_burndown.py` if you skip the install.
 
 <img src="assets/demo-search.gif" alt="Searching for a switch connection" width="600">
 
 Non-interactive mode for scripting:
 
 ```
-python3 ib_burndown.py "L10"
-python3 ib_burndown.py "S5.3.1 20/2"
-python3 ib_burndown.py "C1.15"
+ib-lookup "L10"
+ib-lookup "S5.3.1 20/2"
+ib-lookup "C1.15"
 ```
 
 ---

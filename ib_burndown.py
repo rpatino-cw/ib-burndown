@@ -1052,14 +1052,21 @@ def main():
                         help="Switch name to search (e.g. L10, S5.3, C1.4)")
     args = parser.parse_args()
 
+    _SKETCH_URL = "https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001"
+
     if not os.path.isfile(_SKETCH_XLSX):
         print(f"\n  {RED}{BOLD}Missing file!{RESET}\n")
-        print(f"    {RED}✗{RESET}  {os.path.basename(_SKETCH_XLSX)}")
+        print(f"    {RED}x{RESET}  {os.path.basename(_SKETCH_XLSX)}")
         print(f"\n  {BOLD}How to fix:{RESET}")
-        print(f"  Drop the IB Sketch file in the same folder as this script:")
-        print(f"  {DIM}{_DIR}{RESET}\n")
-        print(f"  Get it from the IB shared drive or ask Romeo.\n")
+        print(f"  1. Download the IB Sketch from:")
+        print(f"     {CYAN}{_SKETCH_URL}{RESET}")
+        print(f"     File > Download > .xlsx")
+        print(f"\n  2. Drop it in this folder:")
+        print(f"     {DIM}{_DIR}{RESET}")
+        print(f"\n  3. Relaunch and you're set.\n")
         sys.exit(1)
+
+    print(f"  {GREEN}File found:{RESET} {os.path.basename(_SKETCH_XLSX)}")
 
     if args.query:
         global _ELEVATIONS
