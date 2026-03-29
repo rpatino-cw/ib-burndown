@@ -74,12 +74,6 @@ Press `t` for step-by-step DCT troubleshooting. Context-aware -- it knows the ca
 
 ---
 
-## Why this exists
-
-For DCTs who need answers on the floor, not at a desk. You're standing in front of a rack, you need to know which port, which RU, which cable. Open a terminal, type the switch name, get the answer. No browser, no spreadsheet, no guessing.
-
----
-
 ## Contributing
 
 Fork, PR, no connection data (the Excel files are internal). Keep it simple.
