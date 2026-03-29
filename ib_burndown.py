@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sys
+import webbrowser
 from datetime import datetime
 
 from rich.console import Console
@@ -1055,15 +1056,21 @@ def main():
     _SKETCH_URL = "https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001"
 
     if not os.path.isfile(_SKETCH_XLSX):
+        _HTML_PATH = os.path.join(_DIR, "index.html")
         print(f"\n  {RED}{BOLD}Missing file!{RESET}\n")
         print(f"    {RED}x{RESET}  {os.path.basename(_SKETCH_XLSX)}")
-        print(f"\n  {BOLD}How to fix:{RESET}")
-        print(f"  1. Download the IB Sketch from:")
-        print(f"     {CYAN}{_SKETCH_URL}{RESET}")
-        print(f"     File > Download > .xlsx")
-        print(f"\n  2. Drop it in this folder:")
-        print(f"     {DIM}{_DIR}{RESET}")
-        print(f"\n  3. Relaunch and you're set.\n")
+        if os.path.isfile(_HTML_PATH):
+            print(f"\n  {BOLD}Opening upload page...{RESET}")
+            print(f"  Download the .xlsx from the IB Sketch, drop it in, and relaunch.\n")
+            webbrowser.open(f"file://{_HTML_PATH}")
+        else:
+            print(f"\n  {BOLD}How to fix:{RESET}")
+            print(f"  1. Download the IB Sketch from:")
+            print(f"     {CYAN}{_SKETCH_URL}{RESET}")
+            print(f"     File > Download > .xlsx")
+            print(f"\n  2. Drop it in this folder:")
+            print(f"     {DIM}{_DIR}{RESET}")
+            print(f"\n  3. Relaunch and you're set.\n")
         sys.exit(1)
 
     print(f"  {GREEN}File found:{RESET} {os.path.basename(_SKETCH_XLSX)}")
