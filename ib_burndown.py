@@ -1041,6 +1041,99 @@ def _run():
 
 
 # ════════════════════════════════════════════════════════════════════
+#  DROP ZONE — inline file loader when xlsx is missing
+# ════════════════════════════════════════════════════════════════════
+
+_AMBER = "\033[38;5;208m"
+_BORDER = "\033[38;5;238m"
+_LGRAY = "\033[38;5;245m"
+_GRAY = "\033[38;5;240m"
+_W = 54
+
+def _pad(text):
+    left = (_W - len(text)) // 2
+    right = _W - len(text) - left
+    return " " * left + text + " " * right
+
+def _box_line(content):
+    print(f"  {_BORDER}│{RESET}{content}{_BORDER}│{RESET}")
+
+def _box_blank():
+    _box_line(" " * _W)
+
+def _box_top():
+    print(f"  {_BORDER}┌{'─' * _W}┐{RESET}")
+
+def _box_bottom():
+    print(f"  {_BORDER}└{'─' * _W}┘{RESET}")
+
+def _prompt_drop_zone(sketch_url, sketch_xlsx, project_dir):
+    """Show visual drop zone, accept file, copy it, then continue."""
+    import shutil
+
+    print("\033[2J\033[H")  # clear screen
+    print()
+    print(f"  {BOLD}{WHITE}IB Burndown{RESET}  {DIM}{_LGRAY}Sketch Loader{RESET}")
+    print(f"  {DIM}{_GRAY}EVI01 · US-CENTRAL-07A · Elk Grove{RESET}")
+    print()
+    _box_top()
+    _box_blank()
+    _box_blank()
+    _box_line(f"{_AMBER}{_pad('↑')}{RESET}")
+    _box_blank()
+    _box_line(f"{WHITE}{BOLD}{_pad('Drop .xlsx here')}{RESET}")
+    _box_blank()
+    _box_line(f"{DIM}{_LGRAY}{_pad('drag IB Sketch from Finder into terminal')}{RESET}")
+    _box_line(f"{DIM}{_GRAY}{_pad('then press Enter')}{RESET}")
+    _box_blank()
+    _box_blank()
+    _box_bottom()
+    print()
+    print(f"  {DIM}{_LGRAY}Source sheet:{RESET}")
+    print(f"  {_AMBER}{sketch_url}{RESET}")
+    print(f"  {DIM}{_GRAY}File → Download → Microsoft Excel (.xlsx){RESET}")
+    print()
+
+    filepath = input(f"  {_AMBER}→{RESET} ").strip().strip("'\"").rstrip()
+
+    if not os.path.isfile(filepath):
+        print(f"\n  {RED}{BOLD}✗{RESET}  {RED}File not found{RESET}")
+        sys.exit(1)
+
+    if not filepath.lower().endswith((".xlsx", ".xls")):
+        ext = os.path.splitext(filepath)[1]
+        print(f"\n  {RED}{BOLD}✗{RESET}  {RED}Expected .xlsx, got {ext}{RESET}")
+        sys.exit(1)
+
+    shutil.copy2(filepath, sketch_xlsx)
+    size = os.path.getsize(sketch_xlsx)
+    size_h = f"{size / 1024:.0f}KB" if size < 1048576 else f"{size / 1048576:.1f}MB"
+    basename = os.path.basename(filepath)
+
+    print("\033[2J\033[H")  # clear screen
+    print()
+    print(f"  {BOLD}{WHITE}IB Burndown{RESET}  {DIM}{_LGRAY}Sketch Loader{RESET}")
+    print(f"  {DIM}{_GRAY}EVI01 · US-CENTRAL-07A · Elk Grove{RESET}")
+    print()
+    _box_top()
+    _box_blank()
+    _box_blank()
+    _box_line(f"{GREEN}{BOLD}{_pad('✓')}{RESET}")
+    _box_blank()
+    _box_line(f"{GREEN}{BOLD}{_pad(basename[:_W])}{RESET}")
+    _box_blank()
+    _box_line(f"{_LGRAY}{_pad(f'{size_h} → EVI01 - IB Sketch.xlsx')}{RESET}")
+    _box_line(f"{_LGRAY}{_pad('Launching...')}{RESET}")
+    _box_blank()
+    _box_blank()
+    _box_bottom()
+    print()
+
+    import time
+    time.sleep(1)
+
+
+# ════════════════════════════════════════════════════════════════════
 #  CLI
 # ════════════════════════════════════════════════════════════════════
 
@@ -1056,22 +1149,7 @@ def main():
     _SKETCH_URL = "https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001"
 
     if not os.path.isfile(_SKETCH_XLSX):
-        _HTML_PATH = os.path.join(_DIR, "index.html")
-        print(f"\n  {RED}{BOLD}Missing file!{RESET}\n")
-        print(f"    {RED}x{RESET}  {os.path.basename(_SKETCH_XLSX)}")
-        if os.path.isfile(_HTML_PATH):
-            print(f"\n  {BOLD}Opening upload page...{RESET}")
-            print(f"  Download the .xlsx from the IB Sketch, drop it in, and relaunch.\n")
-            webbrowser.open(f"file://{_HTML_PATH}")
-        else:
-            print(f"\n  {BOLD}How to fix:{RESET}")
-            print(f"  1. Download the IB Sketch from:")
-            print(f"     {CYAN}{_SKETCH_URL}{RESET}")
-            print(f"     File > Download > .xlsx")
-            print(f"\n  2. Drop it in this folder:")
-            print(f"     {DIM}{_DIR}{RESET}")
-            print(f"\n  3. Relaunch and you're set.\n")
-        sys.exit(1)
+        _prompt_drop_zone(_SKETCH_URL, _SKETCH_XLSX, _DIR)
 
     print(f"  {GREEN}File found:{RESET} {os.path.basename(_SKETCH_XLSX)}")
 
