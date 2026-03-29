@@ -20,7 +20,6 @@ except ImportError:
     CYAN, WHITE, MAGENTA, BLUE = "\033[36m", "\033[97m", "\033[35m", "\033[34m"
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
-_CONN_XLSX = os.path.join(_DIR, "DH1 & DH2 All_IB_Connections_Simplified_v2.xlsx")
 _SKETCH_XLSX = os.path.join(_DIR, "EVI01 - IB Sketch.xlsx")
 _CACHE_PATH = os.path.join(_DIR, ".ib_lookup_cache.json")
 
@@ -111,80 +110,71 @@ def _build_switch_name(type_str: str, switch_id: str, data_hall: str, cab: str =
 
 
 # ════════════════════════════════════════════════════════════════════
-#  DATA — IB Connections sheet (primary index)
+#  DATA — IB Sketch pull schedule tabs (primary data source)
 # ════════════════════════════════════════════════════════════════════
 
-def _parse_connections(path: str) -> list[dict]:
-    """Parse the IB Connections sheet into connection dicts."""
+_PREFIX_TYPE = {"S": "Spine", "C": "Core", "L": "Leaf", "N": "Node"}
+
+
+def _parse_switch_name(name: str) -> dict:
+    """Parse a switch name like 'C1.17', 'S1.5.2', 'L10.1.2-DH2' into components."""
+    result = {"type": "", "dh": "", "cab": "", "id": ""}
+    if not name:
+        return result
+
+    # Extract DH suffix
+    dh_m = re.search(r'-DH(\d+)$', name, re.IGNORECASE)
+    base = name[:dh_m.start()] if dh_m else name
+    result["dh"] = f"DH{dh_m.group(1)}" if dh_m else ""
+
+    # Extract prefix letter
+    if base and base[0].upper() in _PREFIX_TYPE:
+        result["type"] = _PREFIX_TYPE[base[0].upper()]
+        base = base[1:]
+    else:
+        return result
+
+    # For Leaf: first number is cab, rest is id (e.g. L10.1.2 → cab=10, id=1.2)
+    if result["type"] == "Leaf":
+        m = re.match(r'^(\d+)\.(.+)$', base)
+        if m:
+            result["cab"] = m.group(1)
+            result["id"] = m.group(2)
+        else:
+            result["id"] = base
+    else:
+        # Core/Spine: first number group could include cab context
+        # C1.17 → group 1, switch 17; S1.5.2 → group 1, tier 5, pos 2
+        result["id"] = base
+
+    return result
+
+
+def _parse_connections_from_sketch(path: str) -> tuple[list[dict], dict[str, dict]]:
+    """Parse Pull Schedule tabs from IB Sketch into connections + enrichment lookup.
+
+    Returns (connections, enrichment_dict).
+    """
     if not os.path.isfile(path):
         print(f"  {RED}Not found:{RESET} {path}")
-        return []
+        return [], {}
 
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    ws = wb[wb.sheetnames[0]]
     connections: list[dict] = []
-
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        if not row or len(row) < 11:
-            continue
-        if row[1] is None and row[4] is None:
-            continue
-
-        src_type = str(row[1]).strip() if row[1] else ""
-        src_dh = str(row[2]).strip() if row[2] else ""
-        src_cab = _normalize_cab(row[3])
-        src_id = _normalize_id(row[4])
-        src_port = _normalize_port(row[5])
-        dest_type = str(row[6]).strip() if row[6] else ""
-        dest_dh = str(row[7]).strip() if row[7] else ""
-        dest_cab = _normalize_cab(row[8])
-        dest_id = _normalize_id(row[9])
-        dest_port = _normalize_port(row[10])
-        tab_ref = str(row[11]).strip() if len(row) > 11 and row[11] else ""
-        data_hall = str(row[0]).strip() if row[0] else ""
-
-        connections.append({
-            "data_hall": data_hall,
-            "src_type": src_type,
-            "src_dh": src_dh,
-            "src_cab": src_cab,
-            "src_id": src_id,
-            "src_port": src_port,
-            "src_name": _build_switch_name(src_type, src_id, src_dh, src_cab),
-            "dest_type": dest_type,
-            "dest_dh": dest_dh,
-            "dest_cab": dest_cab,
-            "dest_id": dest_id,
-            "dest_port": dest_port,
-            "dest_name": _build_switch_name(dest_type, dest_id, dest_dh, dest_cab),
-            "tab_ref": tab_ref,
-            # Enrichment fields (filled by IB Sketch)
-            "status": "",
-            "cable_type": "",
-            "cable_length": "",
-            "optic_type": "",
-            "fabric_id": "",
-        })
-
-    wb.close()
-    return connections
-
-
-# ════════════════════════════════════════════════════════════════════
-#  DATA — IB Sketch pull schedule tabs (enrichment)
-# ════════════════════════════════════════════════════════════════════
-
-def _parse_sketch(path: str) -> dict[str, dict]:
-    """Parse pull schedule tabs. Returns lookup keyed by 'SrcName|SrcPort|DestName|DestPort'."""
-    if not os.path.isfile(path):
-        return {}
-
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     enrichment: dict[str, dict] = {}
 
     for tab_name in wb.sheetnames:
         if "Pull Schedule" not in tab_name:
             continue
+
+        # Infer DH from tab name
+        tab_dh = ""
+        if "DH1" in tab_name:
+            tab_dh = "DH1"
+        elif "DH2" in tab_name:
+            tab_dh = "DH2"
+        elif "DH3" in tab_name:
+            tab_dh = "DH3"
 
         ws = wb[tab_name]
         header_row = None
@@ -197,7 +187,6 @@ def _parse_sketch(path: str) -> dict[str, dict]:
         if not header_row:
             continue
 
-        # Map columns by header name
         for i, h in enumerate(header_row):
             if h is None:
                 continue
@@ -232,29 +221,65 @@ def _parse_sketch(path: str) -> dict[str, dict]:
                 idx = col_map.get(key)
                 if idx is None or idx >= len(row) or row[idx] is None:
                     return ""
-                return str(row[idx]).strip()
+                val = row[idx]
+                if isinstance(val, datetime):
+                    return f"{val.month}/{val.day}"
+                return str(val).strip()
 
-            src = _g("source")
-            dest = _g("dest")
-            if not src or not dest:
+            src_name = _g("source")
+            dest_name = _g("dest")
+            if not src_name or not dest_name:
                 continue
 
             src_port = _g("src_port")
             dest_port = _g("dest_port")
+            status = _g("status")
+            cable_type = _g("cable_type")
+            cable_length = _g("cable_length")
+            optic_type = _g("optic_type")
+            fabric_id = _g("fabric_id")
 
-            # Normalize the key: uppercase switch names + ports
-            key = f"{src.upper()}|{src_port}|{dest.upper()}|{dest_port}"
+            # Parse switch name components
+            src_info = _parse_switch_name(src_name)
+            dest_info = _parse_switch_name(dest_name)
 
+            # Determine data hall
+            data_hall = src_info["dh"] or dest_info["dh"] or tab_dh
+
+            connections.append({
+                "data_hall": data_hall,
+                "src_type": src_info["type"],
+                "src_dh": src_info["dh"] or tab_dh,
+                "src_cab": src_info["cab"],
+                "src_id": src_info["id"],
+                "src_port": src_port,
+                "src_name": src_name,
+                "dest_type": dest_info["type"],
+                "dest_dh": dest_info["dh"] or tab_dh,
+                "dest_cab": dest_info["cab"],
+                "dest_id": dest_info["id"],
+                "dest_port": dest_port,
+                "dest_name": dest_name,
+                "tab_ref": tab_name,
+                "status": status,
+                "cable_type": cable_type,
+                "cable_length": cable_length,
+                "optic_type": optic_type,
+                "fabric_id": fabric_id,
+            })
+
+            # Also build enrichment lookup for backwards compat
+            key = f"{src_name.upper()}|{src_port}|{dest_name.upper()}|{dest_port}"
             enrichment[key] = {
-                "status": _g("status"),
-                "cable_type": _g("cable_type"),
-                "cable_length": _g("cable_length"),
-                "optic_type": _g("optic_type"),
-                "fabric_id": _g("fabric_id"),
+                "status": status,
+                "cable_type": cable_type,
+                "cable_length": cable_length,
+                "optic_type": optic_type,
+                "fabric_id": fabric_id,
             }
 
     wb.close()
-    return enrichment
+    return connections, enrichment
 
 
 def _parse_elevations(path: str) -> dict[str, dict]:
@@ -336,25 +361,6 @@ def _parse_elevations(path: str) -> dict[str, dict]:
     return elevations
 
 
-def _enrich_connections(connections: list[dict], enrichment: dict[str, dict]):
-    """Fill in cable metadata from IB Sketch for each connection."""
-    for conn in connections:
-        # Build lookup key matching the sketch format
-        # Sketch has canonical names like "L10.1.1-DH2", "S1.3.1"
-        key = f"{conn['src_name'].upper()}|{conn['src_port']}|{conn['dest_name'].upper()}|{conn['dest_port']}"
-        info = enrichment.get(key)
-        if not info:
-            # Try reverse direction
-            key_rev = f"{conn['dest_name'].upper()}|{conn['dest_port']}|{conn['src_name'].upper()}|{conn['src_port']}"
-            info = enrichment.get(key_rev)
-        if info:
-            conn["status"] = info.get("status", "")
-            conn["cable_type"] = info.get("cable_type", "")
-            conn["cable_length"] = info.get("cable_length", "")
-            conn["optic_type"] = info.get("optic_type", "")
-            conn["fabric_id"] = info.get("fabric_id", "")
-
-
 # ════════════════════════════════════════════════════════════════════
 #  CACHING
 # ════════════════════════════════════════════════════════════════════
@@ -363,27 +369,21 @@ def _load_cache() -> dict | None:
     if not os.path.isfile(_CACHE_PATH):
         return None
     try:
-        conn_mtime = os.path.getmtime(_CONN_XLSX) if os.path.isfile(_CONN_XLSX) else 0
         sketch_mtime = os.path.getmtime(_SKETCH_XLSX) if os.path.isfile(_SKETCH_XLSX) else 0
         with open(_CACHE_PATH) as f:
             cache = json.load(f)
-        if cache.get("conn_mtime") == conn_mtime and cache.get("sketch_mtime") == sketch_mtime:
-            # v2 cache has "elevations" key
-            if "elevations" in cache:
-                return {"connections": cache["connections"], "elevations": cache["elevations"]}
-            return None  # old cache format, force reload
+        if cache.get("sketch_mtime") == sketch_mtime and "elevations" in cache:
+            return {"connections": cache["connections"], "elevations": cache["elevations"]}
     except (json.JSONDecodeError, OSError, KeyError):
         pass
     return None
 
 
-def _save_cache_v2(connections: list[dict], elevations: dict[str, dict]):
+def _save_cache(connections: list[dict], elevations: dict[str, dict]):
     try:
-        conn_mtime = os.path.getmtime(_CONN_XLSX) if os.path.isfile(_CONN_XLSX) else 0
         sketch_mtime = os.path.getmtime(_SKETCH_XLSX) if os.path.isfile(_SKETCH_XLSX) else 0
         with open(_CACHE_PATH, "w") as f:
             json.dump({
-                "conn_mtime": conn_mtime,
                 "sketch_mtime": sketch_mtime,
                 "connections": connections,
                 "elevations": elevations,
@@ -395,21 +395,12 @@ def _save_cache_v2(connections: list[dict], elevations: dict[str, dict]):
 def _load_data() -> tuple[list[dict], dict[str, dict]]:
     cached = _load_cache()
     if cached is not None:
-        conns = cached.get("connections", cached) if isinstance(cached, dict) else cached
-        elevs = cached.get("elevations", {}) if isinstance(cached, dict) else {}
-        # If old cache format (just a list), reload
-        if isinstance(cached, list):
-            conns = cached
-            elevs = _parse_elevations(_SKETCH_XLSX)
-        return conns, elevs
+        return cached["connections"], cached["elevations"]
 
-    connections = _parse_connections(_CONN_XLSX)
-    enrichment = _parse_sketch(_SKETCH_XLSX)
-    if enrichment:
-        _enrich_connections(connections, enrichment)
+    connections, _ = _parse_connections_from_sketch(_SKETCH_XLSX)
     elevations = _parse_elevations(_SKETCH_XLSX)
     if connections:
-        _save_cache_v2(connections, elevations)
+        _save_cache(connections, elevations)
     return connections, elevations
 
 
@@ -1061,19 +1052,13 @@ def main():
                         help="Switch name to search (e.g. L10, S5.3, C1.4)")
     args = parser.parse_args()
 
-    missing = []
-    if not os.path.isfile(_CONN_XLSX):
-        missing.append(os.path.basename(_CONN_XLSX))
     if not os.path.isfile(_SKETCH_XLSX):
-        missing.append(os.path.basename(_SKETCH_XLSX))
-    if missing:
-        print(f"\n  {RED}{BOLD}Missing files!{RESET}\n")
-        for f in missing:
-            print(f"    {RED}✗{RESET}  {f}")
+        print(f"\n  {RED}{BOLD}Missing file!{RESET}\n")
+        print(f"    {RED}✗{RESET}  {os.path.basename(_SKETCH_XLSX)}")
         print(f"\n  {BOLD}How to fix:{RESET}")
-        print(f"  Drop these files in the same folder as this script:")
+        print(f"  Drop the IB Sketch file in the same folder as this script:")
         print(f"  {DIM}{_DIR}{RESET}\n")
-        print(f"  Get them from the IB shared drive or ask Romeo.\n")
+        print(f"  Get it from the IB shared drive or ask Romeo.\n")
         sys.exit(1)
 
     if args.query:
