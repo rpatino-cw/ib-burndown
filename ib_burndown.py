@@ -1070,7 +1070,7 @@ def main():
         print(f"  {CYAN}{_SKETCH_URL}{RESET}")
         print(f"  File > Download > Microsoft Excel (.xlsx)")
         print(f"\n  Then drag the .xlsx file into this terminal and press Enter.")
-        response = input(f"\n  {GREEN}{BOLD}Drop file here or press Enter to retry:{RESET} ").strip().strip("'\"").rstrip()
+        response = input(f"\n  {GREEN}{BOLD}Drop file here or press Enter to retry:{RESET} ").strip().strip("'\"").replace("\\ ", " ").rstrip()
         if response and os.path.isfile(response):
             if response.lower().endswith((".xlsx", ".xls")):
                 shutil.copy2(response, _SKETCH_XLSX)
