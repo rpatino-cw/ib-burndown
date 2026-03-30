@@ -23,6 +23,7 @@ except ImportError:
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _SKETCH_XLSX = os.path.join(_DIR, "EVI01 - IB Sketch.xlsx")
 _CACHE_PATH = os.path.join(_DIR, ".ib_lookup_cache.json")
+_CACHE_VERSION = 2  # bump when parsing logic changes to auto-invalidate cache
 
 console = Console(highlight=False)
 
@@ -400,7 +401,7 @@ def _load_cache() -> dict | None:
         sketch_mtime = os.path.getmtime(_SKETCH_XLSX) if os.path.isfile(_SKETCH_XLSX) else 0
         with open(_CACHE_PATH) as f:
             cache = json.load(f)
-        if cache.get("sketch_mtime") == sketch_mtime and "elevations" in cache:
+        if cache.get("cache_version") == _CACHE_VERSION and cache.get("sketch_mtime") == sketch_mtime and "elevations" in cache:
             return {"connections": cache["connections"], "elevations": cache["elevations"]}
     except (json.JSONDecodeError, OSError, KeyError):
         pass
@@ -412,6 +413,7 @@ def _save_cache(connections: list[dict], elevations: dict[str, dict]):
         sketch_mtime = os.path.getmtime(_SKETCH_XLSX) if os.path.isfile(_SKETCH_XLSX) else 0
         with open(_CACHE_PATH, "w") as f:
             json.dump({
+                "cache_version": _CACHE_VERSION,
                 "sketch_mtime": sketch_mtime,
                 "connections": connections,
                 "elevations": elevations,
