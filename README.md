@@ -26,6 +26,12 @@ That's it. It sets up everything and launches. First run it'll ask you to downlo
 cd ib-burndown && bash run.sh
 ```
 
+**Get updates:**
+
+```bash
+cd ib-burndown && git pull && bash run.sh
+```
+
 <br>
 
 ## Search
