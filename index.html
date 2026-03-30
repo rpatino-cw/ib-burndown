@@ -332,7 +332,7 @@
   </div>
   <div class="step">
     <div class="step-num">3</div>
-    <div>Drop the downloaded file below, then relaunch <code>ib</code></div>
+    <div>Drop the downloaded file below — save it to the <code>ib-burndown</code> folder, then press Enter in your terminal</div>
   </div>
 </div>
 
@@ -371,7 +371,7 @@
     <polyline points="22 4 12 14.01 9 11.01"/>
   </svg>
   <div class="file-meta">
-    <div class="name" id="successText" style="color: var(--accent)">Saved. Relaunch ib to use it.</div>
+    <div class="name" id="successText" style="color: var(--accent)">Save it to the ib-burndown folder, then press Enter in your terminal.</div>
     <div class="size" id="successPath"></div>
   </div>
 </div>
@@ -439,7 +439,7 @@
       URL.revokeObjectURL(a.href);
 
       document.getElementById('successPath').textContent =
-        'Saved as "EVI01 - IB Sketch.xlsx" — move it to the ib-burndown folder if needed.';
+        'When prompted, save as "EVI01 - IB Sketch.xlsx" inside the ib-burndown folder.';
       successMsg.classList.add('visible');
     };
     reader.readAsArrayBuffer(file);

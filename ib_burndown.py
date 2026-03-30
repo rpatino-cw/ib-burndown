@@ -1056,13 +1056,13 @@ def main():
 
     _SKETCH_URL = "https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001"
 
-    if not os.path.isfile(_SKETCH_XLSX):
+    while not os.path.isfile(_SKETCH_XLSX):
         _HTML_PATH = os.path.join(_DIR, "index.html")
         print(f"\n  {RED}{BOLD}Missing file!{RESET}\n")
         print(f"    {RED}x{RESET}  {os.path.basename(_SKETCH_XLSX)}")
         if os.path.isfile(_HTML_PATH):
             print(f"\n  {BOLD}Opening upload page...{RESET}")
-            print(f"  Download the .xlsx from the IB Sketch, drop it in, and relaunch.\n")
+            print(f"  Download the .xlsx from the IB Sketch and drop it on the page.\n")
             webbrowser.open(f"file://{_HTML_PATH}")
         else:
             print(f"\n  {BOLD}How to fix:{RESET}")
@@ -1071,8 +1071,9 @@ def main():
             print(f"     File > Download > .xlsx")
             print(f"\n  2. Drop it in this folder:")
             print(f"     {DIM}{_DIR}{RESET}")
-            print(f"\n  3. Relaunch and you're set.\n")
-        sys.exit(1)
+        input(f"\n  {GREEN}{BOLD}Once uploaded, press Enter to continue...{RESET} ")
+        if not os.path.isfile(_SKETCH_XLSX):
+            print(f"\n  {RED}File still not found. Try again.{RESET}")
 
     print(f"  {GREEN}File found:{RESET} {os.path.basename(_SKETCH_XLSX)}")
 
