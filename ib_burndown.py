@@ -1056,24 +1056,31 @@ def main():
 
     _SKETCH_URL = "https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001"
 
+    _opened_browser = False
     while not os.path.isfile(_SKETCH_XLSX):
+        import shutil
         _HTML_PATH = os.path.join(_DIR, "index.html")
         print(f"\n  {RED}{BOLD}Missing file!{RESET}\n")
         print(f"    {RED}x{RESET}  {os.path.basename(_SKETCH_XLSX)}")
-        if os.path.isfile(_HTML_PATH):
-            print(f"\n  {BOLD}Opening upload page...{RESET}")
-            print(f"  Download the .xlsx from the IB Sketch and drop it on the page.\n")
+        if not _opened_browser and os.path.isfile(_HTML_PATH):
+            print(f"\n  {BOLD}Opening instructions page...{RESET}")
             webbrowser.open(f"file://{_HTML_PATH}")
-        else:
-            print(f"\n  {BOLD}How to fix:{RESET}")
-            print(f"  1. Download the IB Sketch from:")
-            print(f"     {CYAN}{_SKETCH_URL}{RESET}")
-            print(f"     File > Download > .xlsx")
-            print(f"\n  2. Drop it in this folder:")
-            print(f"     {DIM}{_DIR}{RESET}")
-        input(f"\n  {GREEN}{BOLD}Once uploaded, press Enter to continue...{RESET} ")
+            _opened_browser = True
+        print(f"\n  {BOLD}Download the IB Sketch:{RESET}")
+        print(f"  {CYAN}{_SKETCH_URL}{RESET}")
+        print(f"  File > Download > Microsoft Excel (.xlsx)")
+        print(f"\n  Then drag the .xlsx file into this terminal and press Enter.")
+        response = input(f"\n  {GREEN}{BOLD}Drop file here or press Enter to retry:{RESET} ").strip().strip("'\"").rstrip()
+        if response and os.path.isfile(response):
+            if response.lower().endswith((".xlsx", ".xls")):
+                shutil.copy2(response, _SKETCH_XLSX)
+                print(f"\n  {GREEN}{BOLD}✓{RESET}  {GREEN}Copied to {os.path.basename(_SKETCH_XLSX)}{RESET}")
+            else:
+                print(f"\n  {RED}Expected .xlsx file, got: {os.path.basename(response)}{RESET}")
+        elif response:
+            print(f"\n  {RED}File not found: {response}{RESET}")
         if not os.path.isfile(_SKETCH_XLSX):
-            print(f"\n  {RED}File still not found. Try again.{RESET}")
+            print(f"\n  {RED}Still missing. Try again.{RESET}")
 
     print(f"  {GREEN}File found:{RESET} {os.path.basename(_SKETCH_XLSX)}")
 

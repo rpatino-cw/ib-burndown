@@ -318,7 +318,7 @@
 
 <div class="header">
   <h1>IB Burndown <span>/</span> Load Sketch</h1>
-  <p>The <code>EVI01 - IB Sketch.xlsx</code> file wasn't found. Download it and drop it here.</p>
+  <p>The <code>EVI01 - IB Sketch.xlsx</code> file wasn't found. Download it, then drag it into your terminal.</p>
 </div>
 
 <div class="steps">
@@ -332,158 +332,15 @@
   </div>
   <div class="step">
     <div class="step-num">3</div>
-    <div>Drop the downloaded file below — save it to the <code>ib-burndown</code> folder, then press Enter in your terminal</div>
+    <div>Drag the downloaded <code>.xlsx</code> into your terminal and press Enter</div>
   </div>
 </div>
 
-<div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Upload xlsx file">
-  <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-    <polyline points="17 8 12 3 7 8"/>
-    <line x1="12" y1="3" x2="12" y2="15"/>
-  </svg>
-  <div class="drop-label">
-    Drag &amp; drop here, or <strong id="browseBtn">browse</strong>
-  </div>
-  <div class="drop-hint">.xlsx only</div>
-  <input type="file" id="fileInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+<div class="terminal-hint" style="margin-top: 2rem; padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); text-align: center;">
+  <div style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--accent);">&#8595;</div>
+  <div style="color: var(--text-primary); font-weight: 500;">Drag the downloaded <code>.xlsx</code> into your terminal</div>
+  <div style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 0.85rem;">The CLI is waiting — drop the file there and press Enter</div>
 </div>
 
-<div class="error-msg" id="errorMsg"></div>
-
-<div class="file-info" id="fileInfo">
-  <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-    <line x1="8" y1="13" x2="16" y2="13"/>
-    <line x1="8" y1="17" x2="16" y2="17"/>
-  </svg>
-  <div class="file-meta">
-    <div class="name" id="fileName"></div>
-    <div class="size" id="fileSize"></div>
-  </div>
-  <button class="file-remove" id="removeBtn">Remove</button>
-</div>
-
-<div class="file-info" id="successMsg" style="border-color: var(--accent-dim)">
-  <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-    <polyline points="22 4 12 14.01 9 11.01"/>
-  </svg>
-  <div class="file-meta">
-    <div class="name" id="successText" style="color: var(--accent)">Save it to the ib-burndown folder, then press Enter in your terminal.</div>
-    <div class="size" id="successPath"></div>
-  </div>
-</div>
-
-<script>
-  const dropZone   = document.getElementById('dropZone');
-  const fileInput  = document.getElementById('fileInput');
-  const browseBtn  = document.getElementById('browseBtn');
-  const fileInfo   = document.getElementById('fileInfo');
-  const fileName   = document.getElementById('fileName');
-  const fileSize   = document.getElementById('fileSize');
-  const removeBtn  = document.getElementById('removeBtn');
-  const errorMsg   = document.getElementById('errorMsg');
-  const successMsg = document.getElementById('successMsg');
-
-  let currentFile = null;
-
-  function formatBytes(b) {
-    if (b < 1024) return b + ' B';
-    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
-    return (b / 1048576).toFixed(1) + ' MB';
-  }
-
-  function showError(msg) {
-    errorMsg.textContent = msg;
-    errorMsg.classList.add('visible');
-    setTimeout(() => errorMsg.classList.remove('visible'), 4000);
-  }
-
-  function clearFile() {
-    currentFile = null;
-    fileInput.value = '';
-    fileInfo.classList.remove('visible');
-    successMsg.classList.remove('visible');
-  }
-
-  function handleFile(file) {
-    errorMsg.classList.remove('visible');
-    successMsg.classList.remove('visible');
-
-    if (!file.name.endsWith('.xlsx')) {
-      showError('Only .xlsx files are accepted.');
-      return;
-    }
-
-    currentFile = file;
-    fileName.textContent = file.name;
-    fileSize.textContent = formatBytes(file.size);
-    fileInfo.classList.add('visible');
-
-    // auto-trigger download with correct filename
-    saveFile(file);
-  }
-
-  function saveFile(file) {
-    // Create a download link so the user gets the file saved locally
-    // Since this is a static page, we prompt a "save as" with the correct name
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const blob = new Blob([e.target.result], { type: file.type });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'EVI01 - IB Sketch.xlsx';
-      a.click();
-      URL.revokeObjectURL(a.href);
-
-      document.getElementById('successPath').textContent =
-        'When prompted, save as "EVI01 - IB Sketch.xlsx" inside the ib-burndown folder.';
-      successMsg.classList.add('visible');
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  // click to browse
-  browseBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    fileInput.click();
-  });
-
-  dropZone.addEventListener('click', () => fileInput.click());
-
-  dropZone.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      fileInput.click();
-    }
-  });
-
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) handleFile(fileInput.files[0]);
-  });
-
-  // drag & drop
-  ['dragenter', 'dragover'].forEach(evt =>
-    dropZone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      dropZone.classList.add('drag-over');
-    })
-  );
-
-  ['dragleave', 'drop'].forEach(evt =>
-    dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'))
-  );
-
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  });
-
-  // remove
-  removeBtn.addEventListener('click', clearFile);
-</script>
 </body>
 </html>
