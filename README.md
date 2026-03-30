@@ -15,15 +15,10 @@
 <img src="assets/setup-tutorial.gif" alt="Setup tutorial" width="600">
 
 ```bash
-git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown
-bash run.sh
+git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown && bash run.sh
 ```
 
-`run.sh` auto-creates a `.venv`, installs dependencies, and launches the tool — no manual setup needed.
-
-First run: it opens an instructions page and waits — download the [IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) as `.xlsx`, drag it into your terminal, and press Enter.
-
-> Also works with `pip3 install -e . && ib-lookup` or `python3 ib_burndown.py` directly.
+That's it. It sets up everything and launches. First run it'll ask you to download the [IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) — drag the `.xlsx` into your terminal and press Enter.
 
 <br>
 
