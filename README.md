@@ -21,7 +21,7 @@ git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown
 
 `run.sh` auto-creates a `.venv`, installs dependencies, and launches the tool — no manual setup needed.
 
-First run: it detects the missing xlsx, shows a drop zone — drag the file from Finder, hit Enter, and you're searching. The [IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) link is shown in the terminal.
+First run: it opens a drag-and-drop page in your browser — download the [IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) as `.xlsx`, drop it on the page, and you're searching.
 
 > Also works with `pip3 install -e . && ib-lookup` or `python3 ib_burndown.py` directly.
 
