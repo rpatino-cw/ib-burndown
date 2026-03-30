@@ -284,7 +284,7 @@ def _parse_connections_from_sketch(path: str) -> tuple[list[dict], dict[str, dic
 
 
 def _parse_elevations(path: str) -> dict[str, dict]:
-    """Parse ELEV tabs. Returns lookup: switch_name → {rack, ru, sku, dh, row}."""
+    """Parse ELEV tabs + Leaf Pull Schedule tabs. Returns lookup: switch_name → {rack, ru, sku, dh, row}."""
     if not os.path.isfile(path):
         return {}
 
@@ -356,6 +356,33 @@ def _parse_elevations(path: str) -> dict[str, dict]:
                     "sku": sku,
                     "dh": dh,
                     "row": row_label,
+                }
+
+    # Parse Leaf Pull Schedule tabs for leaf switch rack positions
+    # Tab names: "DH2 Rack 10 Leaf Pull Schedule" → rack 10, DH2
+    leaf_tab_re = re.compile(r'(DH\d+)\s+Rack\s+(\d+)\s+Leaf Pull Schedule')
+    for tab_name in wb.sheetnames:
+        m = leaf_tab_re.match(tab_name)
+        if not m:
+            continue
+        dh = m.group(1)
+        rack_num = int(m.group(2))
+
+        ws = wb[tab_name]
+        leaf_names = set()
+        for row in ws.iter_rows(min_row=2, max_col=2, values_only=True):
+            if row[1]:
+                leaf_names.add(str(row[1]).strip().upper())
+
+        # Assign RU positions sequentially (1-based, bottom to top)
+        for ru, name in enumerate(sorted(leaf_names), 1):
+            if name not in elevations:
+                elevations[name] = {
+                    "rack": rack_num,
+                    "ru": ru,
+                    "sku": "IB Leaf",
+                    "dh": dh,
+                    "row": "",
                 }
 
     wb.close()
