@@ -20,6 +20,12 @@ git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown && bas
 
 That's it. It sets up everything and launches. First run it'll ask you to download the [IB Sketch](https://docs.google.com/spreadsheets/d/1U132alRVDtcrVd5kW4v534U3ME7wRZ5g3kHQMZP2LaM/edit?gid=1992819001#gid=1992819001) — drag the `.xlsx` into your terminal and press Enter.
 
+**Run again anytime:**
+
+```bash
+cd ib-burndown && bash run.sh
+```
+
 <br>
 
 ## Search
