@@ -16,7 +16,7 @@
 
 ```bash
 git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown
-./run.sh
+bash run.sh
 ```
 
 `run.sh` auto-creates a `.venv`, installs dependencies, and launches the tool — no manual setup needed.
