@@ -843,8 +843,44 @@ def _map_halls(conn: dict) -> list[str]:
     return sorted(halls)
 
 
+def _rack_switch_map(rack_num: int) -> dict[int, dict]:
+    """Get all switches in a rack as {ru: {name, sku}}."""
+    by_ru: dict[int, dict] = {}
+    for sw_name, info in _ELEVATIONS.items():
+        if info["rack"] == rack_num:
+            by_ru[info["ru"]] = {"name": sw_name, "sku": info.get("sku", "")}
+    return by_ru
+
+
+def _build_rack(rack_num: int, side_label: str, highlight_ru: int | None = None) -> list[str]:
+    """Render full rack with all RU positions as lines, highlight a specific RU."""
+    by_ru = _rack_switch_map(rack_num)
+    if not by_ru:
+        return [f"  {DIM}(no elevation data for R{rack_num}){RESET}"]
+
+    max_ru = max(by_ru.keys())
+    min_ru = min(by_ru.keys())
+
+    lines = [f"  {BOLD}Rack {rack_num}{RESET}  {DIM}{side_label}{RESET}"]
+    lines.append(f"  {DIM}┌{'─' * 22}┐{RESET}")
+
+    for ru in range(max_ru, min_ru - 1, -1):
+        sw = by_ru.get(ru)
+        if sw:
+            name = sw["name"]
+            if ru == highlight_ru:
+                lines.append(f"  {DIM}│{RESET} {BOLD}{ru:>2}{RESET}  {CYAN}{BOLD}{name}{RESET} {CYAN}{BOLD}◄{RESET}")
+            else:
+                lines.append(f"  {DIM}│{RESET} {DIM}{ru:>2}{RESET}  {DIM}{name}{RESET}")
+        else:
+            lines.append(f"  {DIM}│ {ru:>2}  ·{RESET}")
+
+    lines.append(f"  {DIM}└{'─' * 22}┘{RESET}")
+    return lines
+
+
 def _draw_elevation(conn: dict, searched: str = ""):
-    """Draw a full rack elevation for both sides with actual RU positions."""
+    """Draw rack elevations for both sides, side by side."""
     src_name = conn["src_name"].upper()
     dest_name = conn["dest_name"].upper()
 
@@ -855,55 +891,17 @@ def _draw_elevation(conn: dict, searched: str = ""):
         print(f"  {DIM}No elevation data for this connection{RESET}")
         return
 
-    def _rack_switch_map(rack_num: int) -> dict[int, dict]:
-        """Get all switches in a rack as {ru: {name, sku}}."""
-        by_ru: dict[int, dict] = {}
-        for sw_name, info in _ELEVATIONS.items():
-            if info["rack"] == rack_num:
-                by_ru[info["ru"]] = {"name": sw_name, "sku": info.get("sku", "")}
-        return by_ru
-
-    highlights = {src_name, dest_name}
-
-    def _render_rack(rack_num: int, cab: str, side_label: str) -> list[str]:
-        """Render full rack with all RU positions, top to bottom."""
-        by_ru = _rack_switch_map(rack_num)
-        if not by_ru:
-            return [f"  {DIM}(no elevation data for R{rack_num}){RESET}"]
-
-        max_ru = max(by_ru.keys())
-        min_ru = min(by_ru.keys())
-
-        lines = [f"  {BOLD}Rack {rack_num}{RESET}  {DIM}{side_label}{RESET}"]
-        lines.append(f"  {DIM}┌{'─' * 22}┐{RESET}")
-
-        for ru in range(max_ru, min_ru - 1, -1):
-            sw = by_ru.get(ru)
-            if sw:
-                name = sw["name"]
-                if name in highlights:
-                    lines.append(f"  {DIM}│{RESET} {BOLD}{ru:>2}{RESET}  {CYAN}{BOLD}{name}{RESET} {CYAN}{BOLD}◄{RESET}")
-                else:
-                    lines.append(f"  {DIM}│{RESET} {DIM}{ru:>2}{RESET}  {DIM}{name}{RESET}")
-            else:
-                lines.append(f"  {DIM}│ {ru:>2}  ·{RESET}")
-
-        lines.append(f"  {DIM}└{'─' * 22}┘{RESET}")
-        return lines
-
     print()
     sides = []
     no_elev_note = []
     if src_elev:
-        src_cab = conn.get("src_cab", "")
-        sides.append(_render_rack(src_elev["rack"], src_cab, conn["src_name"]))
+        sides.append(_build_rack(src_elev["rack"], conn["src_name"], src_elev["ru"]))
     else:
         cab = conn.get("src_cab", "")
         no_elev_note.append(f"{conn['src_name']}{f' (Cab{cab})' if cab else ''}")
     if dest_elev:
-        dest_cab = conn.get("dest_cab", "")
         if not src_elev or dest_elev["rack"] != src_elev["rack"]:
-            sides.append(_render_rack(dest_elev["rack"], dest_cab, conn["dest_name"]))
+            sides.append(_build_rack(dest_elev["rack"], conn["dest_name"], dest_elev["ru"]))
     else:
         cab = conn.get("dest_cab", "")
         no_elev_note.append(f"{conn['dest_name']}{f' (Cab{cab})' if cab else ''}")
@@ -1084,22 +1082,42 @@ def _detail_prompt(conn: dict):
 #  INTERACTIVE LOOP
 # ════════════════════════════════════════════════════════════════════
 
+def _build_switch_panel(name: str, port_str: str) -> list[str]:
+    """Build combined faceplate + rack elevation for one switch as lines."""
+    lines = _build_faceplate(name, port_str)
+    elev = _ELEVATIONS.get(name.upper())
+    if elev:
+        lines.append("")  # spacer
+        lines.extend(_build_rack(elev["rack"], name, elev["ru"]))
+    return lines
+
+
 def _show_connection_detail(conn: dict):
-    """Auto-expand full detail: connection info + ports + elevation + map."""
+    """Auto-expand full detail: faceplate+elevation per switch side-by-side, then map."""
     _print_detail(conn)
-    if conn.get("src_port") or conn.get("dest_port"):
-        _draw_port_diagram(conn)
-    if (_ELEVATIONS.get(conn["src_name"].upper())
-            or _ELEVATIONS.get(conn["dest_name"].upper())):
-        _draw_elevation(conn)
+
+    # Build combined panels (faceplate + elevation) for each switch
+    has_ports = conn.get("src_port") or conn.get("dest_port")
+    src_elev = _ELEVATIONS.get(conn["src_name"].upper())
+    dest_elev = _ELEVATIONS.get(conn["dest_name"].upper())
+
+    if has_ports or src_elev or dest_elev:
+        print()
+        if has_ports:
+            left = _build_switch_panel(conn["src_name"], conn["src_port"])
+            right = _build_switch_panel(conn["dest_name"], conn["dest_port"])
+            _side_by_side(left, right)
+        elif src_elev or dest_elev:
+            # No port data, just show elevations side by side
+            _draw_elevation(conn)
+        print()
+
     # Floor map
     dh = conn.get("data_hall", "")
     rack_a = _extract_rack(conn["src_name"], dh)
     rack_b = _extract_rack(conn["dest_name"], dh)
     if rack_a or rack_b:
         halls = _map_halls(conn)
-        src_elev = _ELEVATIONS.get(conn["src_name"].upper())
-        dest_elev = _ELEVATIONS.get(conn["dest_name"].upper())
         src_dh = src_elev["dh"] if src_elev and src_elev.get("dh") else ("DH2" if "DH2" in conn["src_name"] else "DH1" if "DH1" in conn["src_name"] else None)
         dest_dh = dest_elev["dh"] if dest_elev and dest_elev.get("dh") else ("DH2" if "DH2" in conn["dest_name"] else "DH1" if "DH1" in conn["dest_name"] else None)
         for lk in halls:
