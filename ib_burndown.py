@@ -908,19 +908,8 @@ def _draw_elevation(conn: dict, searched: str = ""):
         cab = conn.get("dest_cab", "")
         no_elev_note.append(f"{conn['dest_name']}{f' (Cab{cab})' if cab else ''}")
 
-    _ansi_re = re.compile(r'\033\[[0-9;]*m')
-
     if len(sides) == 2:
-        max_len = max(len(sides[0]), len(sides[1]))
-        for s in sides:
-            while len(s) < max_len:
-                s.append("")
-        max_w = max(len(_ansi_re.sub('', line)) for line in sides[0])
-        pad = max(max_w + 4, 30)
-        for l_line, r_line in zip(sides[0], sides[1]):
-            visible_len = len(_ansi_re.sub('', l_line))
-            spacing = pad - visible_len
-            print(f"{l_line}{' ' * spacing}{r_line}")
+        _side_by_side(sides[0], sides[1])
     elif sides:
         for line in sides[0]:
             print(line)
@@ -928,6 +917,29 @@ def _draw_elevation(conn: dict, searched: str = ""):
         for name in no_elev_note:
             print(f"  {DIM}{name} — no rack elevation data{RESET}")
     print()
+
+
+# ════════════════════════════════════════════════════════════════════
+#  SIDE-BY-SIDE RENDERING
+# ════════════════════════════════════════════════════════════════════
+
+_ANSI_RE = re.compile(r'\033\[[0-9;]*m')
+
+
+def _visible_len(s: str) -> int:
+    return len(_ANSI_RE.sub('', s))
+
+
+def _side_by_side(left: list[str], right: list[str], gap: int = 4):
+    """Print two blocks of lines horizontally with a gap."""
+    max_len = max(len(left), len(right))
+    left += [''] * (max_len - len(left))
+    right += [''] * (max_len - len(right))
+    max_w = max((_visible_len(l) for l in left), default=0)
+    pad = max_w + gap
+    for l_line, r_line in zip(left, right):
+        spacing = pad - _visible_len(l_line)
+        print(f"{l_line}{' ' * spacing}{r_line}")
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -942,21 +954,15 @@ def _parse_port(port_str: str) -> tuple[int, int]:
     return 0, 0
 
 
-def _draw_faceplate(name: str, port_str: str):
-    """Draw a 32-port QM9700 faceplate with highlighted port and lane detail."""
+def _build_faceplate(name: str, port_str: str) -> list[str]:
+    """Build a 32-port QM9700 faceplate as lines (for side-by-side rendering)."""
     port_num, lane = _parse_port(port_str)
     if port_num == 0:
-        print(f"  {DIM}{name}: can't parse port '{port_str}'{RESET}")
-        return
+        return [f"  {DIM}{name}: can't parse port '{port_str}'{RESET}"]
 
-    is_top_row = port_num % 2 == 1
     top_ports = list(range(1, 32, 2))    # 1,3,5,...,31
     bot_ports = list(range(2, 33, 2))    # 2,4,6,...,32
 
-    # Header
-    print(f"\n  {BOLD}{name}{RESET}  {DIM}port{RESET} {CYAN}{BOLD}{port_num}/{lane}{RESET}")
-
-    # Build row strings
     def _cell(p):
         if p == port_num:
             return f"{CYAN}{BOLD}{p:>2}{RESET}"
@@ -965,41 +971,43 @@ def _draw_faceplate(name: str, port_str: str):
     def _row(ports):
         return "│".join(_cell(p) for p in ports)
 
+    def _lane_row(ports, top: bool):
+        cells = []
+        for p in ports:
+            if p == port_num:
+                if top:
+                    l1 = f"{CYAN}{BOLD}1{RESET}" if lane == 1 else f"{DIM}1{RESET}"
+                    l2 = f"{CYAN}{BOLD}2{RESET}" if lane == 2 else f"{DIM}2{RESET}"
+                    cells.append(f"{l1}{l2}")
+                else:
+                    l2 = f"{CYAN}{BOLD}2{RESET}" if lane == 2 else f"{DIM}2{RESET}"
+                    l1 = f"{CYAN}{BOLD}1{RESET}" if lane == 1 else f"{DIM}1{RESET}"
+                    cells.append(f"{l2}{l1}")
+            else:
+                cells.append(f"{DIM}··{RESET}")
+        suffix = f"  {DIM}/1 /2{RESET}" if top else f"  {DIM}/2 /1{RESET}"
+        return f"  │{'│'.join(cells)}│{suffix}"
+
     sep = "──"
-    print(f"  {DIM}┌{'┬'.join([sep]*16)}┐{RESET}")
-    # Top row: port numbers
-    print(f"  │{_row(top_ports)}│")
-    # Top row: lane indicators (/1 left, /2 right)
-    lane_cells = []
-    for p in top_ports:
-        if p == port_num:
-            l1 = f"{CYAN}{BOLD}1{RESET}" if lane == 1 else f"{DIM}1{RESET}"
-            l2 = f"{CYAN}{BOLD}2{RESET}" if lane == 2 else f"{DIM}2{RESET}"
-            lane_cells.append(f"{l1}{l2}")
-        else:
-            lane_cells.append(f"{DIM}··{RESET}")
-    print(f"  │{'│'.join(lane_cells)}│  {DIM}/1 /2{RESET}")
-    # Divider
-    print(f"  {DIM}├{'┼'.join([sep]*16)}┤{RESET}")
-    # Bottom row: lane indicators (/2 left, /1 right — swapped)
-    lane_cells = []
-    for p in bot_ports:
-        if p == port_num:
-            l2 = f"{CYAN}{BOLD}2{RESET}" if lane == 2 else f"{DIM}2{RESET}"
-            l1 = f"{CYAN}{BOLD}1{RESET}" if lane == 1 else f"{DIM}1{RESET}"
-            lane_cells.append(f"{l2}{l1}")
-        else:
-            lane_cells.append(f"{DIM}··{RESET}")
-    print(f"  │{'│'.join(lane_cells)}│  {DIM}/2 /1{RESET}")
-    # Bottom row: port numbers
-    print(f"  │{_row(bot_ports)}│")
-    print(f"  {DIM}└{'┴'.join([sep]*16)}┘{RESET}")
+    lines = [
+        f"  {BOLD}{name}{RESET}  {DIM}port{RESET} {CYAN}{BOLD}{port_num}/{lane}{RESET}",
+        f"  {DIM}┌{'┬'.join([sep]*16)}┐{RESET}",
+        f"  │{_row(top_ports)}│",
+        _lane_row(top_ports, top=True),
+        f"  {DIM}├{'┼'.join([sep]*16)}┤{RESET}",
+        _lane_row(bot_ports, top=False),
+        f"  │{_row(bot_ports)}│",
+        f"  {DIM}└{'┴'.join([sep]*16)}┘{RESET}",
+    ]
+    return lines
 
 
 def _draw_port_diagram(conn: dict):
-    """Draw port diagrams for both sides of a connection."""
-    _draw_faceplate(conn["src_name"], conn["src_port"])
-    _draw_faceplate(conn["dest_name"], conn["dest_port"])
+    """Draw port diagrams for both sides of a connection, side by side."""
+    left = _build_faceplate(conn["src_name"], conn["src_port"])
+    right = _build_faceplate(conn["dest_name"], conn["dest_port"])
+    print()
+    _side_by_side(left, right)
     print()
 
 
@@ -1076,6 +1084,16 @@ def _detail_prompt(conn: dict):
 #  INTERACTIVE LOOP
 # ════════════════════════════════════════════════════════════════════
 
+def _show_connection_detail(conn: dict):
+    """Auto-expand full detail: connection info + ports + elevation."""
+    _print_detail(conn)
+    if conn.get("src_port") or conn.get("dest_port"):
+        _draw_port_diagram(conn)
+    if (_ELEVATIONS.get(conn["src_name"].upper())
+            or _ELEVATIONS.get(conn["dest_name"].upper())):
+        _draw_elevation(conn)
+
+
 def _flush_stdin():
     """Flush any buffered keystrokes so they don't leak into the next prompt."""
     try:
@@ -1132,7 +1150,7 @@ def _run():
             _print_result(conn, idx)
 
         if len(results) == 1:
-            _print_detail(results[0])
+            _show_connection_detail(results[0])
             _detail_prompt(results[0])
             _flush_stdin()
             continue
@@ -1144,7 +1162,7 @@ def _run():
         if sel.isdigit():
             n = int(sel) - 1
             if 0 <= n < len(results):
-                _print_detail(results[n])
+                _show_connection_detail(results[n])
                 _detail_prompt(results[n])
                 _flush_stdin()
             else:
