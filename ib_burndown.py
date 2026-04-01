@@ -390,6 +390,77 @@ def _parse_elevations(path: str) -> dict[str, dict]:
     return elevations
 
 
+def _parse_leaf_elevations(path: str) -> dict[str, dict]:
+    """Build synthetic elevation entries for leaf switches from Leaf Pull Schedule tabs.
+
+    Leaf switches aren't in ELEV tabs, but their rack/DH is encoded in the tab name
+    and their position in the switch name (e.g. L10.1.3-DH2 → rack 10, position 3, DH2).
+    """
+    if not os.path.isfile(path):
+        return {}
+
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    elevations: dict[str, dict] = {}
+
+    for tab_name in wb.sheetnames:
+        if "Leaf Pull Schedule" not in tab_name:
+            continue
+
+        # Extract rack number and DH from tab name
+        m = re.search(r'(DH\d+)\s+Rack\s+(\d+)', tab_name)
+        if not m:
+            continue
+        dh = m.group(1)
+        rack_num = int(m.group(2))
+
+        # Find source column
+        ws = wb[tab_name]
+        header_row = None
+        for row in ws.iter_rows(min_row=1, max_row=1, values_only=True):
+            header_row = row
+            break
+        if not header_row:
+            continue
+
+        src_col = None
+        for ci, h in enumerate(header_row):
+            if h and str(h).strip().lower() == "source":
+                src_col = ci
+                break
+        if src_col is None:
+            continue
+
+        # Collect unique leaf names from this tab
+        leaves = set()
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row or src_col >= len(row) or row[src_col] is None:
+                continue
+            name = str(row[src_col]).strip()
+            if name.startswith("L"):
+                leaves.add(name)
+
+        # Assign RU positions based on position number in the name (2U spacing)
+        for leaf_name in sorted(leaves):
+            key = leaf_name.upper()
+            if key in elevations:
+                continue
+            # Extract position from name: L10.1.3-DH2 → position 3
+            pos_m = re.search(r'\.(\d+)(?:-DH\d+)?$', leaf_name)
+            pos = int(pos_m.group(1)) if pos_m else 1
+            ru = 1 + (pos - 1) * 2  # 2U spacing: pos 1→RU1, pos 2→RU3, etc.
+
+            elevations[key] = {
+                "rack": rack_num,
+                "ru": ru,
+                "sku": "",
+                "dh": dh,
+                "row": "",
+            }
+
+    wb.close()
+    return elevations
+
+
 # ════════════════════════════════════════════════════════════════════
 #  CACHING
 # ════════════════════════════════════════════════════════════════════
@@ -429,6 +500,10 @@ def _load_data() -> tuple[list[dict], dict[str, dict]]:
 
     connections, _ = _parse_connections_from_sketch(_SKETCH_XLSX)
     elevations = _parse_elevations(_SKETCH_XLSX)
+    leaf_elevations = _parse_leaf_elevations(_SKETCH_XLSX)
+    for k, v in leaf_elevations.items():
+        if k not in elevations:
+            elevations[k] = v
     if connections:
         _save_cache(connections, elevations)
     return connections, elevations
@@ -924,7 +999,7 @@ def _draw_elevation(conn: dict, searched: str = ""):
             print(line)
     if no_elev_note:
         for name in no_elev_note:
-            print(f"  {DIM}{name} — no rack elevation data (leaf switches not in ELEV tabs){RESET}")
+            print(f"  {DIM}{name} — no rack elevation data{RESET}")
     print()
 
 

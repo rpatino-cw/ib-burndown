@@ -25,6 +25,14 @@ typeout() {
   echo ""
 }
 
+# ── Title card with fullscreen hint ──
+echo ""
+printf "  ${BORDER}╭──────────────────────────────────────────────────────╮${RST}\n"
+printf "  ${BORDER}│${RST}  ${BOLD}${WHITE}IB Burndown${RST}  ${DIM}${LGRAY}Setup Guide${RST}              ${DIM}${AMBER}⛶ Fullscreen${RST}  ${BORDER}│${RST}\n"
+printf "  ${BORDER}╰──────────────────────────────────────────────────────╯${RST}\n"
+echo ""
+sleep 2.5
+
 # ── Step 1: Clone + install ──
 echo -e "${DIM}# Step 1 — Clone and install${RST}"
 echo ""
