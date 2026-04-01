@@ -849,7 +849,8 @@ def _rack_switch_map(rack_num: int, dh_filter: str = "") -> dict[int, dict]:
     dh_f = dh_filter.upper()
     for sw_name, info in _ELEVATIONS.items():
         if info["rack"] == rack_num:
-            if dh_f and info.get("dh", "").upper() != dh_f:
+            # Only filter leaf switches by DH — cores/spines have real unique RU positions
+            if dh_f and sw_name.startswith("L") and info.get("dh", "").upper() != dh_f:
                 continue
             by_ru[info["ru"]] = {"name": sw_name, "sku": info.get("sku", "")}
     return by_ru
