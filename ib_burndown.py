@@ -843,21 +843,25 @@ def _map_halls(conn: dict) -> list[str]:
     return sorted(halls)
 
 
-def _rack_switch_map(rack_num: int) -> dict[int, dict]:
-    """Get all switches in a rack as {ru: {name, sku}}."""
+def _rack_switch_map(rack_num: int, dh_filter: str = "") -> dict[int, dict]:
+    """Get all switches in a rack as {ru: {name, sku}}, optionally filtered by DH."""
     by_ru: dict[int, dict] = {}
+    dh_f = dh_filter.upper()
     for sw_name, info in _ELEVATIONS.items():
         if info["rack"] == rack_num:
+            if dh_f and info.get("dh", "").upper() != dh_f:
+                continue
             by_ru[info["ru"]] = {"name": sw_name, "sku": info.get("sku", "")}
     return by_ru
 
 
-def _build_rack(rack_num: int, side_label: str, highlight_ru: int | None = None) -> list[str]:
-    """Render full rack with all RU positions as lines, highlight a specific RU."""
-    by_ru = _rack_switch_map(rack_num)
+def _build_rack(rack_num: int, side_label: str, highlight_name: str = "", dh: str = "") -> list[str]:
+    """Render full rack with all RU positions as lines, highlight a specific switch by name."""
+    by_ru = _rack_switch_map(rack_num, dh_filter=dh)
     if not by_ru:
         return [f"  {DIM}(no elevation data for R{rack_num}){RESET}"]
 
+    hl = highlight_name.upper()
     max_ru = max(by_ru.keys())
     min_ru = min(by_ru.keys())
 
@@ -868,7 +872,7 @@ def _build_rack(rack_num: int, side_label: str, highlight_ru: int | None = None)
         sw = by_ru.get(ru)
         if sw:
             name = sw["name"]
-            if ru == highlight_ru:
+            if name == hl:
                 lines.append(f"  {DIM}│{RESET} {BOLD}{ru:>2}{RESET}  {CYAN}{BOLD}{name}{RESET} {CYAN}{BOLD}◄{RESET}")
             else:
                 lines.append(f"  {DIM}│{RESET} {DIM}{ru:>2}{RESET}  {DIM}{name}{RESET}")
@@ -895,13 +899,13 @@ def _draw_elevation(conn: dict, searched: str = ""):
     sides = []
     no_elev_note = []
     if src_elev:
-        sides.append(_build_rack(src_elev["rack"], conn["src_name"], src_elev["ru"]))
+        sides.append(_build_rack(src_elev["rack"], conn["src_name"], conn["src_name"], dh=src_elev.get("dh", "")))
     else:
         cab = conn.get("src_cab", "")
         no_elev_note.append(f"{conn['src_name']}{f' (Cab{cab})' if cab else ''}")
     if dest_elev:
         if not src_elev or dest_elev["rack"] != src_elev["rack"]:
-            sides.append(_build_rack(dest_elev["rack"], conn["dest_name"], dest_elev["ru"]))
+            sides.append(_build_rack(dest_elev["rack"], conn["dest_name"], conn["dest_name"], dh=dest_elev.get("dh", "")))
     else:
         cab = conn.get("dest_cab", "")
         no_elev_note.append(f"{conn['dest_name']}{f' (Cab{cab})' if cab else ''}")
@@ -1101,7 +1105,7 @@ def _build_switch_panel(name: str, port_str: str) -> list[str]:
     faceplate = _build_faceplate(name, port_str)
     elev = _ELEVATIONS.get(name.upper())
     if elev:
-        rack_lines = _build_rack(elev["rack"], name, elev["ru"])
+        rack_lines = _build_rack(elev["rack"], name, name, dh=elev.get("dh", ""))
         return _lines_side_by_side(faceplate, rack_lines)
     return faceplate
 
