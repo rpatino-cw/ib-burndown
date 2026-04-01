@@ -940,6 +940,20 @@ def _side_by_side(left: list[str], right: list[str], gap: int = 4):
         print(f"{l_line}{' ' * spacing}{r_line}")
 
 
+def _lines_side_by_side(left: list[str], right: list[str], gap: int = 4) -> list[str]:
+    """Combine two blocks of lines horizontally, returning lines (not printing)."""
+    max_len = max(len(left), len(right))
+    left = left + [''] * (max_len - len(left))
+    right = right + [''] * (max_len - len(right))
+    max_w = max((_visible_len(l) for l in left), default=0)
+    pad = max_w + gap
+    result = []
+    for l_line, r_line in zip(left, right):
+        spacing = pad - _visible_len(l_line)
+        result.append(f"{l_line}{' ' * spacing}{r_line}")
+    return result
+
+
 # ════════════════════════════════════════════════════════════════════
 #  PORT DIAGRAM — QM9700 faceplate with twin-port OSFP lanes
 # ════════════════════════════════════════════════════════════════════
@@ -1083,32 +1097,35 @@ def _detail_prompt(conn: dict):
 # ════════════════════════════════════════════════════════════════════
 
 def _build_switch_panel(name: str, port_str: str) -> list[str]:
-    """Build combined faceplate + rack elevation for one switch as lines."""
-    lines = _build_faceplate(name, port_str)
+    """Build faceplate side-by-side with rack elevation for one switch."""
+    faceplate = _build_faceplate(name, port_str)
     elev = _ELEVATIONS.get(name.upper())
     if elev:
-        lines.append("")  # spacer
-        lines.extend(_build_rack(elev["rack"], name, elev["ru"]))
-    return lines
+        rack_lines = _build_rack(elev["rack"], name, elev["ru"])
+        return _lines_side_by_side(faceplate, rack_lines)
+    return faceplate
 
 
 def _show_connection_detail(conn: dict):
-    """Auto-expand full detail: faceplate+elevation per switch side-by-side, then map."""
+    """Auto-expand full detail: each switch as [faceplate | elevation], then map."""
     _print_detail(conn)
 
-    # Build combined panels (faceplate + elevation) for each switch
     has_ports = conn.get("src_port") or conn.get("dest_port")
     src_elev = _ELEVATIONS.get(conn["src_name"].upper())
     dest_elev = _ELEVATIONS.get(conn["dest_name"].upper())
 
     if has_ports or src_elev or dest_elev:
-        print()
         if has_ports:
-            left = _build_switch_panel(conn["src_name"], conn["src_port"])
-            right = _build_switch_panel(conn["dest_name"], conn["dest_port"])
-            _side_by_side(left, right)
+            # Each switch: faceplate next to elevation, stacked per switch
+            src_panel = _build_switch_panel(conn["src_name"], conn["src_port"])
+            dest_panel = _build_switch_panel(conn["dest_name"], conn["dest_port"])
+            print()
+            for line in src_panel:
+                print(line)
+            print()
+            for line in dest_panel:
+                print(line)
         elif src_elev or dest_elev:
-            # No port data, just show elevations side by side
             _draw_elevation(conn)
         print()
 
