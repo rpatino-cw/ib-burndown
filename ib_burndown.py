@@ -1085,13 +1085,30 @@ def _detail_prompt(conn: dict):
 # ════════════════════════════════════════════════════════════════════
 
 def _show_connection_detail(conn: dict):
-    """Auto-expand full detail: connection info + ports + elevation."""
+    """Auto-expand full detail: connection info + ports + elevation + map."""
     _print_detail(conn)
     if conn.get("src_port") or conn.get("dest_port"):
         _draw_port_diagram(conn)
     if (_ELEVATIONS.get(conn["src_name"].upper())
             or _ELEVATIONS.get(conn["dest_name"].upper())):
         _draw_elevation(conn)
+    # Floor map
+    dh = conn.get("data_hall", "")
+    rack_a = _extract_rack(conn["src_name"], dh)
+    rack_b = _extract_rack(conn["dest_name"], dh)
+    if rack_a or rack_b:
+        halls = _map_halls(conn)
+        src_elev = _ELEVATIONS.get(conn["src_name"].upper())
+        dest_elev = _ELEVATIONS.get(conn["dest_name"].upper())
+        src_dh = src_elev["dh"] if src_elev and src_elev.get("dh") else ("DH2" if "DH2" in conn["src_name"] else "DH1" if "DH1" in conn["src_name"] else None)
+        dest_dh = dest_elev["dh"] if dest_elev and dest_elev.get("dh") else ("DH2" if "DH2" in conn["dest_name"] else "DH1" if "DH1" in conn["dest_name"] else None)
+        for lk in halls:
+            ha = rack_a if (src_dh == lk or src_dh is None) else None
+            hb = rack_b if (dest_dh == lk or dest_dh is None) else None
+            la = conn["src_name"] if ha else ""
+            lb = conn["dest_name"] if hb else ""
+            layout = _LAYOUTS.get(lk, _LAYOUTS["DH1"])
+            _draw_map(layout, highlight_a=ha, highlight_b=hb, label_a=la, label_b=lb)
 
 
 def _flush_stdin():
