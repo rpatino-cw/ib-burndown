@@ -23,7 +23,7 @@ except ImportError:
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _SKETCH_XLSX = os.path.join(_DIR, "EVI01 - IB Sketch.xlsx")
 _CACHE_PATH = os.path.join(_DIR, ".ib_lookup_cache.json")
-_CACHE_VERSION = 2  # bump when parsing logic changes to auto-invalidate cache
+_CACHE_VERSION = 3  # bump when parsing logic changes to auto-invalidate cache
 
 console = Console(highlight=False)
 
@@ -375,87 +375,18 @@ def _parse_elevations(path: str) -> dict[str, dict]:
             if row[1]:
                 leaf_names.add(str(row[1]).strip().upper())
 
-        # Assign RU positions sequentially (1-based, bottom to top)
-        for ru, name in enumerate(sorted(leaf_names), 1):
+        # Assign RU positions: .1 at top (highest RU), .8 at bottom
+        sorted_leaves = sorted(leaf_names)
+        count = len(sorted_leaves)
+        for i, name in enumerate(sorted_leaves):
             if name not in elevations:
                 elevations[name] = {
                     "rack": rack_num,
-                    "ru": ru,
+                    "ru": count - i,  # .1 → highest RU (top of rack)
                     "sku": "IB Leaf",
                     "dh": dh,
                     "row": "",
                 }
-
-    wb.close()
-    return elevations
-
-
-def _parse_leaf_elevations(path: str) -> dict[str, dict]:
-    """Build synthetic elevation entries for leaf switches from Leaf Pull Schedule tabs.
-
-    Leaf switches aren't in ELEV tabs, but their rack/DH is encoded in the tab name
-    and their position in the switch name (e.g. L10.1.3-DH2 → rack 10, position 3, DH2).
-    """
-    if not os.path.isfile(path):
-        return {}
-
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    elevations: dict[str, dict] = {}
-
-    for tab_name in wb.sheetnames:
-        if "Leaf Pull Schedule" not in tab_name:
-            continue
-
-        # Extract rack number and DH from tab name
-        m = re.search(r'(DH\d+)\s+Rack\s+(\d+)', tab_name)
-        if not m:
-            continue
-        dh = m.group(1)
-        rack_num = int(m.group(2))
-
-        # Find source column
-        ws = wb[tab_name]
-        header_row = None
-        for row in ws.iter_rows(min_row=1, max_row=1, values_only=True):
-            header_row = row
-            break
-        if not header_row:
-            continue
-
-        src_col = None
-        for ci, h in enumerate(header_row):
-            if h and str(h).strip().lower() == "source":
-                src_col = ci
-                break
-        if src_col is None:
-            continue
-
-        # Collect unique leaf names from this tab
-        leaves = set()
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or src_col >= len(row) or row[src_col] is None:
-                continue
-            name = str(row[src_col]).strip()
-            if name.startswith("L"):
-                leaves.add(name)
-
-        # Assign RU positions based on position number in the name (2U spacing)
-        for leaf_name in sorted(leaves):
-            key = leaf_name.upper()
-            if key in elevations:
-                continue
-            # Extract position from name: L10.1.3-DH2 → position 3
-            pos_m = re.search(r'\.(\d+)(?:-DH\d+)?$', leaf_name)
-            pos = int(pos_m.group(1)) if pos_m else 1
-            ru = 1 + (pos - 1) * 2  # 2U spacing: pos 1→RU1, pos 2→RU3, etc.
-
-            elevations[key] = {
-                "rack": rack_num,
-                "ru": ru,
-                "sku": "",
-                "dh": dh,
-                "row": "",
-            }
 
     wb.close()
     return elevations
@@ -500,10 +431,6 @@ def _load_data() -> tuple[list[dict], dict[str, dict]]:
 
     connections, _ = _parse_connections_from_sketch(_SKETCH_XLSX)
     elevations = _parse_elevations(_SKETCH_XLSX)
-    leaf_elevations = _parse_leaf_elevations(_SKETCH_XLSX)
-    for k, v in leaf_elevations.items():
-        if k not in elevations:
-            elevations[k] = v
     if connections:
         _save_cache(connections, elevations)
     return connections, elevations
@@ -1003,20 +930,95 @@ def _draw_elevation(conn: dict, searched: str = ""):
     print()
 
 
-def _detail_options_hint(has_map: bool, has_elev: bool) -> str:
+# ════════════════════════════════════════════════════════════════════
+#  PORT DIAGRAM — QM9700 faceplate with twin-port OSFP lanes
+# ════════════════════════════════════════════════════════════════════
+
+def _parse_port(port_str: str) -> tuple[int, int]:
+    """Parse '21/1' into (port_num=21, lane=1). Returns (0,0) on failure."""
+    m = re.match(r'^(\d+)/(\d+)$', port_str.strip())
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    return 0, 0
+
+
+def _draw_faceplate(name: str, port_str: str):
+    """Draw a 32-port QM9700 faceplate with highlighted port and lane detail."""
+    port_num, lane = _parse_port(port_str)
+    if port_num == 0:
+        print(f"  {DIM}{name}: can't parse port '{port_str}'{RESET}")
+        return
+
+    is_top_row = port_num % 2 == 1
+    top_ports = list(range(1, 32, 2))    # 1,3,5,...,31
+    bot_ports = list(range(2, 33, 2))    # 2,4,6,...,32
+
+    # Header
+    print(f"\n  {BOLD}{name}{RESET}  {DIM}port{RESET} {CYAN}{BOLD}{port_num}/{lane}{RESET}")
+
+    # Build row strings
+    def _cell(p):
+        if p == port_num:
+            return f"{CYAN}{BOLD}{p:>2}{RESET}"
+        return f"{DIM}{p:>2}{RESET}"
+
+    def _row(ports):
+        return "│".join(_cell(p) for p in ports)
+
+    sep = "──"
+    print(f"  {DIM}┌{'┬'.join([sep]*16)}┐{RESET}")
+    # Top row: port numbers
+    print(f"  │{_row(top_ports)}│")
+    # Top row: lane indicators (/1 left, /2 right)
+    lane_cells = []
+    for p in top_ports:
+        if p == port_num:
+            l1 = f"{CYAN}{BOLD}1{RESET}" if lane == 1 else f"{DIM}1{RESET}"
+            l2 = f"{CYAN}{BOLD}2{RESET}" if lane == 2 else f"{DIM}2{RESET}"
+            lane_cells.append(f"{l1}{l2}")
+        else:
+            lane_cells.append(f"{DIM}··{RESET}")
+    print(f"  │{'│'.join(lane_cells)}│  {DIM}/1 /2{RESET}")
+    # Divider
+    print(f"  {DIM}├{'┼'.join([sep]*16)}┤{RESET}")
+    # Bottom row: lane indicators (/2 left, /1 right — swapped)
+    lane_cells = []
+    for p in bot_ports:
+        if p == port_num:
+            l2 = f"{CYAN}{BOLD}2{RESET}" if lane == 2 else f"{DIM}2{RESET}"
+            l1 = f"{CYAN}{BOLD}1{RESET}" if lane == 1 else f"{DIM}1{RESET}"
+            lane_cells.append(f"{l2}{l1}")
+        else:
+            lane_cells.append(f"{DIM}··{RESET}")
+    print(f"  │{'│'.join(lane_cells)}│  {DIM}/2 /1{RESET}")
+    # Bottom row: port numbers
+    print(f"  │{_row(bot_ports)}│")
+    print(f"  {DIM}└{'┴'.join([sep]*16)}┘{RESET}")
+
+
+def _draw_port_diagram(conn: dict):
+    """Draw port diagrams for both sides of a connection."""
+    _draw_faceplate(conn["src_name"], conn["src_port"])
+    _draw_faceplate(conn["dest_name"], conn["dest_port"])
+    print()
+
+
+def _detail_options_hint(has_map: bool, has_elev: bool, has_ports: bool = False) -> str:
     """Build the options hint string."""
     opts = []
     if has_map:
         opts.append(f"{DIM}[m]{RESET} map")
     if has_elev:
         opts.append(f"{DIM}[e]{RESET} elevation")
+    if has_ports:
+        opts.append(f"{DIM}[v]{RESET} ports")
     opts.append(f"{DIM}[t]{RESET} tips")
     opts.append(f"{DIM}[Enter]{RESET} back")
     return " ".join(opts)
 
 
 def _detail_prompt(conn: dict):
-    """Handle [m]/[t]/[e] sub-prompt after compact detail."""
+    """Handle [m]/[t]/[e]/[v] sub-prompt after compact detail."""
     dh = conn.get("data_hall", "")
     rack_a = _extract_rack(conn["src_name"], dh)
     rack_b = _extract_rack(conn["dest_name"], dh)
@@ -1025,8 +1027,10 @@ def _detail_prompt(conn: dict):
         _ELEVATIONS.get(conn["src_name"].upper())
         or _ELEVATIONS.get(conn["dest_name"].upper())
     )
+    has_ports = bool(conn.get("src_port") or conn.get("dest_port"))
 
-    print(f"  {_detail_options_hint(has_map, has_elev)}")
+    hint = _detail_options_hint(has_map, has_elev, has_ports)
+    print(f"  {hint}")
 
     while True:
         sel = _prompt()
@@ -1035,7 +1039,10 @@ def _detail_prompt(conn: dict):
         sl = sel.lower()
         if sl in ("q", "quit", "exit"):
             raise SystemExit(0)
-        if sl == "m" and has_map:
+        if sl == "v" and has_ports:
+            _draw_port_diagram(conn)
+            print(f"  {hint}")
+        elif sl == "m" and has_map:
             halls = _map_halls(conn)
             src_elev = _ELEVATIONS.get(conn["src_name"].upper())
             dest_elev = _ELEVATIONS.get(conn["dest_name"].upper())
@@ -1048,10 +1055,10 @@ def _detail_prompt(conn: dict):
                 lb = conn["dest_name"] if hb else ""
                 layout = _LAYOUTS.get(lk, _LAYOUTS["DH1"])
                 _draw_map(layout, highlight_a=ha, highlight_b=hb, label_a=la, label_b=lb)
-            print(f"  {_detail_options_hint(has_map, has_elev)}")
+            print(f"  {hint}")
         elif sl == "e" and has_elev:
             _draw_elevation(conn)
-            print(f"  {_detail_options_hint(has_map, has_elev)}")
+            print(f"  {hint}")
         elif sl == "t":
             tips = _get_tips(conn)
             if tips:
@@ -1060,7 +1067,7 @@ def _detail_prompt(conn: dict):
                     print(f"    {DIM}{i}.{RESET} {label}")
                     print(f"       {CYAN}{cmd}{RESET}")
                 print()
-            print(f"  {_detail_options_hint(has_map, has_elev)}")
+            print(f"  {hint}")
         else:
             return  # unrecognized input — back to search
 
