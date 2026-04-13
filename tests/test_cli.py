@@ -37,7 +37,7 @@ def test_oneshot_search():
     )
     assert result.returncode == 0
     assert "S5.3.1" in result.stdout
-    assert "match" in result.stdout.lower()
+    assert "connection" in result.stdout.lower() or "match" in result.stdout.lower()
 
 
 def test_oneshot_search_with_port():

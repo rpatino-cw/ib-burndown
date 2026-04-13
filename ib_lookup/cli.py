@@ -435,15 +435,61 @@ def _run(xlsx_path: str):
             print(f"  {c(DIM, 'No matches for ' + repr(query))}\n")
             continue
 
-        print(f"\n  {c(BOLD, query)} — {len(results)} match{'es' if len(results) != 1 else ''}\n")
-        for idx, conn in enumerate(results, 1):
-            _print_result(conn, idx)
-
         if len(results) == 1:
+            print(f"\n  {c(BOLD, query)} — 1 match\n")
+            _print_result(results[0], 1)
             _show_connection_detail(results[0], elevations, layouts)
             _detail_prompt(results[0], elevations, layouts)
             _flush_stdin()
             continue
+
+        # Large result sets — group by switch name first
+        if len(results) > 30:
+            switches = {}
+            for conn_item in results:
+                for side in ("src_name", "dest_name"):
+                    name = conn_item[side]
+                    if query.upper() in name.upper() or any(
+                        c_name.upper() in name.upper()
+                        for c_name in [query.upper()]
+                    ):
+                        switches.setdefault(name, 0)
+                        switches[name] += 1
+
+            print(f"\n  {c(BOLD, query)} — {len(results)} connections across {len(switches)} switches\n")
+            sorted_sw = sorted(switches.items(), key=lambda x: -x[1])
+            for i, (sw_name, count) in enumerate(sorted_sw, 1):
+                elev = elevations.get(sw_name.upper())
+                loc = f"R{elev['rack']}:U{elev['ru']}" if elev else ""
+                print(f"  {c(BOLD, f'{i:>3}.')} {c(CYAN, sw_name)}  {c(DIM, f'{count} connections')}  {c(DIM, loc)}")
+
+            print(f"\n  {c(DIM, 'Pick a switch number, or search more specifically (e.g. ' + query + ' 1/1)')}")
+            sel = _prompt()
+            if sel in ("q", "quit", "exit"):
+                break
+            if sel.isdigit():
+                n = int(sel) - 1
+                if 0 <= n < len(sorted_sw):
+                    sw_name = sorted_sw[n][0]
+                    # Filter results to just this switch
+                    filtered = [r for r in results if r["src_name"] == sw_name or r["dest_name"] == sw_name]
+                    print(f"\n  {c(BOLD, sw_name)} — {len(filtered)} connections\n")
+                    for idx, conn_item in enumerate(filtered, 1):
+                        _print_result(conn_item, idx)
+                    print(f"\n  {c(DIM, 'Enter a number for details, or just search again')}")
+                    sel2 = _prompt()
+                    if sel2 and sel2.isdigit():
+                        n2 = int(sel2) - 1
+                        if 0 <= n2 < len(filtered):
+                            _show_connection_detail(filtered[n2], elevations, layouts)
+                            _detail_prompt(filtered[n2], elevations, layouts)
+                            _flush_stdin()
+            continue
+
+        # Normal result list (<=30)
+        print(f"\n  {c(BOLD, query)} — {len(results)} match{'es' if len(results) != 1 else ''}\n")
+        for idx, conn_item in enumerate(results, 1):
+            _print_result(conn_item, idx)
 
         print(f"\n  {c(DIM, 'Enter a number for details, or just search again')}")
         sel = _prompt()
@@ -512,11 +558,31 @@ def main():
         if not results:
             print(f"  {c(DIM, 'No matches for ' + repr(args.query))}")
             return
-        print(f"\n  {c(BOLD, args.query)} — {len(results)} matches\n")
-        for idx, conn in enumerate(results, 1):
-            _print_result(conn, idx)
-        if len(results) == 1:
+
+        # Group large result sets by switch
+        if len(results) > 30:
+            switches = {}
+            q_upper = args.query.upper()
+            for conn_item in results:
+                for side in ("src_name", "dest_name"):
+                    name = conn_item[side]
+                    if q_upper in name.upper():
+                        switches.setdefault(name, 0)
+                        switches[name] += 1
+            print(f"\n  {c(BOLD, args.query)} — {len(results)} connections across {len(switches)} switches\n")
+            for i, (sw_name, count) in enumerate(sorted(switches.items(), key=lambda x: -x[1]), 1):
+                elev = elevations.get(sw_name.upper())
+                loc = f"R{elev['rack']}:U{elev['ru']}" if elev else ""
+                print(f"  {c(BOLD, f'{i:>3}.')} {c(CYAN, sw_name)}  {c(DIM, f'{count} connections')}  {c(DIM, loc)}")
+            print(f"\n  {c(DIM, 'Narrow with a port filter: ' + args.query + ' 1/1')}")
+        elif len(results) == 1:
+            print(f"\n  {c(BOLD, args.query)} — 1 match\n")
+            _print_result(results[0], 1)
             _print_detail(results[0], elevations)
+        else:
+            print(f"\n  {c(BOLD, args.query)} — {len(results)} matches\n")
+            for idx, conn_item in enumerate(results, 1):
+                _print_result(conn_item, idx)
         print()
         return
 
