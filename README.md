@@ -98,25 +98,47 @@ After either option, search a switch and press `m` for the floor map.
 
 ## Usage
 
-```
-ib-lookup                              # IB interactive search
-ib-lookup S5.3.1                       # IB one-shot search
-ib-lookup "C1.15 20/2"                 # IB search + port filter
-ib-lookup --trad                       # traditional networking search
-ib-lookup --trad --file MASTER.xlsx    # trad with specific file
-ib-lookup --import-overhead site.csv   # import floor layout
+### IB mode (default)
+
+```bash
+ib-lookup                              # interactive search
+ib-lookup S5.3.1                       # spine switch
+ib-lookup "C1.15 20/2"                 # core switch + port filter
+ib-lookup L10                          # all leaf switches in cab 10
+ib-lookup 8.3.2                        # auto-detects type
 ib-lookup --file path/to/sketch.xlsx   # specify xlsx location
 ```
 
-**Inside a search result, press:**
+### Traditional networking mode
 
-| Key | What it shows |
-|-----|--------------|
-| `m` | Floor map with highlighted racks |
-| `e` | Rack elevation (RU positions, full device inventory in trad mode) |
-| `v` | Port faceplate diagram (IB mode) |
-| `t` | DCT troubleshooting steps |
-| `Enter` | Back to search |
+```bash
+ib-lookup --trad                       # interactive search
+trad-lookup                            # same thing (alias)
+ib-lookup --trad --file MASTER.xlsx    # specify cutsheet location
+```
+
+Trad mode search supports:
+- **Hostname:** `dh2-t0-d1-01-r001-us-central-07a` (exact or substring)
+- **Rack number:** `r130` or `130` (shows all devices in that rack)
+- **Role/model:** `infra`, `t0`, `t1`, `grid`, `pod`, `con`, `SN3700`
+
+Connections are grouped by peer role (INFRA, T0, T1, GRID, POD, etc.) with port, rack, and cable info.
+
+### Floor maps
+
+```bash
+ib-lookup --import-overhead site.csv   # import rack layout from overhead tab
+```
+
+### Inside a search result, press:
+
+| Key | IB mode | Trad mode |
+|-----|---------|-----------|
+| `m` | Floor map with highlighted racks | Floor map with highlighted racks |
+| `e` | Rack elevation (switch RU positions) | Full rack elevation (all devices — compute, networking, storage) |
+| `v` | QM9700 port faceplate diagram | — |
+| `t` | DCT troubleshooting steps | DCT troubleshooting steps |
+| `Enter` | Back to search | Back to search |
 
 <br>
 
