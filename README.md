@@ -10,44 +10,109 @@
 
 <br>
 
-## Get started
+## Quick start (3 steps)
+
+### 1. Install
 
 ```bash
-pip install git+https://github.com/rpatino-cw/ib-burndown.git
+pip install git+https://github.com/rpatino-cw/ib-burndown.git@experimental/v2-merge
 ```
 
 Or clone and run directly:
 
 ```bash
-git clone https://github.com/rpatino-cw/ib-burndown.git && cd ib-burndown && bash run.sh
+git clone -b experimental/v2-merge https://github.com/rpatino-cw/ib-burndown.git
+cd ib-burndown && bash run.sh
 ```
 
-Place your site's IB Sketch `.xlsx` in the directory and run `ib-lookup`. It auto-detects the site, data halls, and connections.
+### 2. Add your site's IB Sketch
 
-<br>
+Download your site's IB Sketch as `.xlsx` from Google Sheets:
 
-## Set up floor maps
+1. Open your site's IB Sketch in Google Sheets
+2. **File > Download > Microsoft Excel (.xlsx)**
+3. Move the file into the `ib-burndown/` folder (or anywhere — you can point to it with `--file`)
 
-Floor maps need your site's rack layout. Import it from an overhead CSV:
+The file needs **Pull Schedule** tabs (connections) and **ELEV** tabs (rack positions). Most IB Sketches already have these.
+
+### 3. Run
 
 ```bash
-ib-lookup --import-overhead your-overhead.csv
+ib-lookup
 ```
 
-This parses the CSV, detects rack columns, serpentine patterns, and data halls, then saves the layout to `~/.datahall/layouts.json`. No questions asked — fully automatic.
+That's it. The app reads your `.xlsx`, auto-detects the site name, data halls, and all connections. Search works immediately — type any switch name.
 
 <br>
 
-## Search
+## Set up floor maps (optional but recommended)
 
-<img src="assets/demo-search.gif" alt="Search for a switch" width="600">
+Search, elevations, and port diagrams work out of the box. **Floor maps** need one extra step — your site's rack layout.
+
+### Option A: Import from overhead CSV (recommended)
+
+If your site has an overhead document (the spreadsheet with the physical rack layout), export it as CSV and run:
+
+```bash
+ib-lookup --import-overhead your-site-overhead.csv
+```
+
+The parser auto-detects:
+- Rack number rows and column groupings
+- Serpentine vs linear rack ordering
+- Data hall boundaries (DH1, DH2, etc.)
+- Multi-column layouts (Left/Right splits)
+
+It writes the result to `~/.datahall/layouts.json`. No questions, no manual input.
+
+**Where to get the overhead CSV:**
+- Google Sheets: open the overhead > **File > Download > CSV**
+- Ask your site lead or DCT team — most sites have one in the shared drive
+
+### Option B: Manual config (if no overhead exists)
+
+Create `~/.datahall/layouts.json` with your hall dimensions:
+
+```json
+{
+  "YOUR-SITE.DH1": {
+    "racks_per_row": 10,
+    "columns": [
+      {"label": "Left",  "start": 1,   "num_rows": 14},
+      {"label": "Right", "start": 141, "num_rows": 17}
+    ],
+    "serpentine": true
+  }
+}
+```
+
+You need three numbers per column: **start rack**, **number of rows**, and **racks per row**. Ask anyone who knows the hall layout.
+
+### Verify it works
+
+After either option, run `ib-lookup`, search a switch, and press `m` for the floor map.
+
+<br>
+
+## Usage
 
 ```
-ib-lookup                    # interactive mode
-ib-lookup S5.3.1             # one-shot search
-ib-lookup "C1.15 20/2"       # search with port filter
-ib-lookup --file sketch.xlsx # specify file
+ib-lookup                           # interactive search
+ib-lookup S5.3.1                    # one-shot search
+ib-lookup "C1.15 20/2"              # search + port filter
+ib-lookup --file path/to/sketch.xlsx  # specify xlsx location
+ib-lookup --import-overhead site.csv  # import floor layout from CSV
 ```
+
+**Inside a search result, press:**
+
+| Key | What it shows |
+|-----|--------------|
+| `m` | Floor map with highlighted racks |
+| `e` | Rack elevation (RU positions) |
+| `v` | Port faceplate diagram |
+| `t` | DCT troubleshooting steps |
+| `Enter` | Back to search |
 
 <br>
 
@@ -63,21 +128,29 @@ ib-lookup --file sketch.xlsx # specify file
 
 <br>
 
+## Port diagram — `v`
+
+<img src="assets/demo-search.gif" alt="Search and port diagram" width="600">
+
+<br>
+
 ## Troubleshooting — `t`
 
 <img src="assets/mode-tips.png" alt="Troubleshooting tips" width="600">
 
 <br>
 
-## Works at any site
+## How it works
 
-v2 has zero hardcoded site references. It reads whatever your Excel gives it:
+The app has zero hardcoded site references. Everything is detected from your data:
 
-- **Site name** — detected from sheet names and fabric IDs
-- **Data halls** — detected from tab names (DH1, DH2, DH3, ...)
-- **Rack layouts** — imported from overhead CSV or inferred from elevation data
-- **Connections** — parsed from any Pull Schedule tabs
-- **Elevations** — parsed from any ELEV tabs
+| What | How it's detected |
+|------|------------------|
+| Site name | Sheet names, fabric IDs in the Excel |
+| Data halls | Tab names containing DH1, DH2, etc. |
+| Connections | Any tab with "Pull Schedule" in the name |
+| Elevations | Any tab with "ELEV" in the name + Leaf Pull Schedule tabs |
+| Rack layouts | Imported from overhead CSV or `~/.datahall/layouts.json` |
 
 <br>
 
