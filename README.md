@@ -17,7 +17,7 @@
 | **IB Sketch** (`.xlsx`) | InfiniBand connection list — pull schedules, elevations, port mappings | Your site's shared Google Drive. Ask your site lead or DCT team. Download as **File > Download > Microsoft Excel (.xlsx)** | Yes |
 | **Overhead** (`.csv`) | Physical rack layout — rack numbers, positions, data hall structure | Your site's shared Google Drive. Same place as the IB Sketch — it's the floor plan view. Download as **File > Download > CSV** | Only for floor maps |
 
-> **Note:** The IB Sketch and Overhead are two different sheets. They look similar — both have rack numbers and switch names — but they serve different purposes. The IB Sketch has **IB fabric connections** (source/destination/port/cable). The Overhead has the **physical rack layout** (which rack sits where on the floor). The Overhead is also used for traditional networking connections, not just IB.
+> **Note:** These are two different sheets. The IB Sketch has **IB fabric connections** (source/destination/port/cable). The Overhead has the **physical rack layout** (which rack sits where on the floor). This tool is IB-only — the overhead is just used to generate the floor map.
 
 <br>
 
