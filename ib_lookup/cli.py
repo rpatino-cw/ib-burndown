@@ -474,6 +474,8 @@ def main():
                         help="Switch name to search (e.g. L10, S5.3, C1.4)")
     parser.add_argument("--file", "-f", default=None,
                         help="Path to IB Sketch .xlsx file")
+    parser.add_argument("--trad", action="store_true",
+                        help="Traditional networking mode (MASTER cutsheet)")
     parser.add_argument("--import-overhead", metavar="CSV",
                         help="Import overhead CSV to generate floor layouts")
     parser.add_argument("--version", "-V", action="version",
@@ -485,6 +487,12 @@ def main():
         from ib_lookup.overhead import import_overhead
         success = import_overhead(args.import_overhead)
         sys.exit(0 if success else 1)
+
+    # Handle --trad
+    if args.trad:
+        from ib_lookup.trad_cli import run_trad
+        run_trad(file_arg=args.file)
+        return
 
     xlsx_path = _find_xlsx(args.file)
     if not xlsx_path:
