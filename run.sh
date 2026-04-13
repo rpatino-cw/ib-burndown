@@ -1,5 +1,5 @@
 #!/bin/bash
-# run.sh — One-command launcher for ib-lookup
+# run.sh — One-command launcher for ib-lookup v2
 set -e
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,4 +12,4 @@ if [ ! -d "$VENV" ]; then
   "$VENV/bin/pip" install --quiet -r "$DIR/requirements.txt"
 fi
 
-exec "$VENV/bin/python3" "$DIR/ib_burndown.py" "$@"
+exec "$VENV/bin/python3" -m ib_lookup "$@"

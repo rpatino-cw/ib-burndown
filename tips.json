@@ -1,0 +1,8 @@
+[
+  {"label": "Find the racks",       "cmd": "Go to ~R{rack_a} ({src_name}) and ~R{rack_b} ({dest_name})"},
+  {"label": "Check cable seating",  "cmd": "Reseat cable at both ends — pull fully out, inspect, push back in"},
+  {"label": "Inspect for damage",   "cmd": "Look for bent pins, dust, kinks, or damaged fiber ends"},
+  {"label": "Verify port LEDs",     "cmd": "Check link LED on both switch ports — should be green/amber, not off"},
+  {"label": "Label check",          "cmd": "Confirm cable label matches cutsheet for both ends"},
+  {"label": "Escalate if no fix",   "cmd": "If reseat doesn't fix it, comment on the Google Sheet and tag network"}
+]
