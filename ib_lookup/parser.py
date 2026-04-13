@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime
 
@@ -213,6 +214,8 @@ def parse_elevations(path: str) -> dict[str, dict]:
 
     Returns lookup: SWITCH_NAME_UPPER → {rack, ru, sku, dh, row}.
     """
+    if not os.path.isfile(path):
+        return {}
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     elevations: dict[str, dict] = {}
 

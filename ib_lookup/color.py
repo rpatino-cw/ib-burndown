@@ -30,6 +30,12 @@ def color_enabled():
     return _use_color
 
 
+def set_color(enabled):
+    """Override color detection (for testing)."""
+    global _use_color
+    _use_color = enabled
+
+
 # Map symbols for floor map rendering
 SYMBOL_STYLES = {
     "@": f"{BOLD}{CYAN}",
