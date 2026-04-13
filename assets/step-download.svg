@@ -17,7 +17,7 @@
     <rect x="20" y="30" width="200" height="90" rx="12" fill="#1a1a2e" stroke="#4a9ec4" stroke-width="2"/>
     <text x="40" y="58" fill="#4a9ec4" font-size="11" font-weight="bold">1</text>
     <text x="55" y="58" fill="#e0e0e0" font-size="13" font-weight="600">Open in Google Sheets</text>
-    <text x="40" y="80" fill="#888" font-size="11">Your site's IB Sketch</text>
+    <text x="40" y="80" fill="#888" font-size="11">Your site's spreadsheet</text>
     <rect x="40" y="92" width="160" height="18" rx="4" fill="#0d47a1" opacity="0.3"/>
     <text x="50" y="105" fill="#64b5f6" font-size="10">docs.google.com/spreadsheets/...</text>
   </g>
@@ -63,7 +63,7 @@
   </g>
 
   <!-- Bottom: what the file contains -->
-  <g class="step step1">
+  <g class="step step3">
     <rect x="20" y="150" width="660" height="150" rx="12" fill="#111122" stroke="#333" stroke-width="1"/>
     <text x="40" y="178" fill="#e0e0e0" font-size="13" font-weight="600">What's inside the IB Sketch:</text>
 

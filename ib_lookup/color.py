@@ -55,3 +55,10 @@ def colorize(text, symbol=None):
     if style:
         return f"{style}{text}{RESET}"
     return text
+
+
+def c(style_code, text):
+    """Apply an ANSI style to text, respecting NO_COLOR."""
+    if not color_enabled():
+        return str(text)
+    return f"{style_code}{text}{RESET}"

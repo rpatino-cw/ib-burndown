@@ -21,8 +21,6 @@
 | **IB Sketch** (`.xlsx`) | InfiniBand fabric connections — pull schedules, elevations, port mappings | Your site's shared Google Drive. Ask your site lead or DCT team. | For IB mode |
 | **Master Cutsheet / Overhead** (`.xlsx`) | Traditional networking + physical rack layout. Contains SITE-HOSTS (devices), CUTSHEET (connections), and OVERHEAD (floor plan) tabs. | Same shared drive — every site has one. | For trad mode + floor maps |
 
-> **Note:** Two files, two purposes. The **IB Sketch** has IB fabric connections (Spine/Core/Leaf/Node). The **Master Cutsheet / Overhead** has traditional networking (TOR, infra, frontend — swp/eth ports) and the physical rack layout. To get floor maps, export the OVERHEAD tab as CSV and run `--import-overhead`.
-
 <br>
 
 ## Quick start

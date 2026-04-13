@@ -12,7 +12,7 @@ import sys
 import openpyxl
 
 from ib_lookup import __version__
-from ib_lookup.color import BOLD, DIM, RESET, CYAN, YELLOW, RED, GREEN
+from ib_lookup.color import BOLD, DIM, RESET, CYAN, YELLOW, RED, GREEN, c
 from ib_lookup.parser import parse_connections, parse_elevations, detect_site
 from ib_lookup.cache import load_cache, save_cache
 from ib_lookup.layouts import (
@@ -38,7 +38,7 @@ def _find_xlsx(file_arg: str | None = None) -> str | None:
     if file_arg:
         if os.path.isfile(file_arg):
             return os.path.abspath(file_arg)
-        print(f"  {RED}File not found:{RESET} {file_arg}")
+        print(f"  {c(RED, 'File not found:')} {file_arg}")
         return None
 
     # Search current dir then project dir
@@ -215,22 +215,21 @@ def _short_fabric(fabric_id: str) -> str:
 
 
 def _print_result(conn: dict, idx: int):
-    num = f"{BOLD}{idx:>3}.{RESET}"
-    tier = f"{DIM}{_tier_label(conn)}{RESET}"
-    line = (f"{CYAN}{conn['src_name']}{RESET} {conn['src_port']} "
-            f"{DIM}→{RESET} "
-            f"{YELLOW}{conn['dest_name']}{RESET} {conn['dest_port']}")
+    num = c(BOLD, f"{idx:>3}.")
+    tier = c(DIM, _tier_label(conn))
+    line = (f"{c(CYAN, conn['src_name'])} {conn['src_port']} "
+            f"{c(DIM, '→')} "
+            f"{c(YELLOW, conn['dest_name'])} {conn['dest_port']}")
     print(f"  {num} {line}  {tier}")
 
 
 def _print_detail(conn: dict, elevations: dict):
     tier = _tier_label(conn)
-    dh = conn.get("data_hall", "")
 
-    line = (f"{CYAN}{BOLD}{conn['src_name']}{RESET} {conn['src_port']} "
-            f"{DIM}→{RESET} "
-            f"{YELLOW}{BOLD}{conn['dest_name']}{RESET} {conn['dest_port']}"
-            f"  {DIM}{tier}{RESET}")
+    line = (f"{c(CYAN+BOLD, conn['src_name'])} {conn['src_port']} "
+            f"{c(DIM, '→')} "
+            f"{c(YELLOW+BOLD, conn['dest_name'])} {conn['dest_port']}"
+            f"  {c(DIM, tier)}")
     print(f"\n  {line}")
 
     meta = []
@@ -246,7 +245,7 @@ def _print_detail(conn: dict, elevations: dict):
     if fab:
         meta.append(fab)
     if meta:
-        print(f"  {DIM}{' · '.join(meta)}{RESET}")
+        print(f"  {c(DIM, ' · '.join(meta))}")
 
     rack_a = _extract_rack(conn["src_name"], elevations)
     rack_b = _extract_rack(conn["dest_name"], elevations)
@@ -254,14 +253,14 @@ def _print_detail(conn: dict, elevations: dict):
     dest_cab = _cab_label(conn, "dest")
 
     def _loc(rack, name, cab):
-        parts = [f"{BOLD}R{rack}{RESET}"] if rack else []
+        parts = [c(BOLD, f"R{rack}")] if rack else []
         elev = elevations.get(name.upper())
         if elev:
             parts.append(f"RU{elev['ru']}")
         if cab:
             parts.append(cab)
         label = " ".join(parts) if parts else ""
-        return f"{label} {DIM}({name}){RESET}" if label else f"{DIM}({name}){RESET}"
+        return f"{label} {c(DIM, f'({name})')}" if label else c(DIM, f"({name})")
 
     if rack_a or rack_b or src_cab or dest_cab:
         print(f"  {_loc(rack_a, conn['src_name'], src_cab)} → {_loc(rack_b, conn['dest_name'], dest_cab)}")
@@ -300,7 +299,7 @@ def _show_connection_detail(conn: dict, elevations: dict, layouts: dict):
         for lk in halls:
             layout = layouts.get(lk)
             if not layout:
-                print(f"  {DIM}No floor layout for {lk} — add it to ~/.datahall/layouts.json{RESET}")
+                print(f"  {c(DIM, f'No floor layout for {lk} — add it to ~/.datahall/layouts.json')}")
                 continue
             ha = rack_a if (src_dh == lk or src_dh is None) else None
             hb = rack_b if (dest_dh == lk or dest_dh is None) else None
@@ -323,13 +322,13 @@ def _detail_prompt(conn: dict, elevations: dict, layouts: dict):
 
     opts = []
     if has_map:
-        opts.append(f"{DIM}[m]{RESET} map")
+        opts.append(f"{c(DIM, '[m]')} map")
     if has_elev:
-        opts.append(f"{DIM}[e]{RESET} elevation")
+        opts.append(f"{c(DIM, '[e]')} elevation")
     if has_ports:
-        opts.append(f"{DIM}[v]{RESET} ports")
-    opts.append(f"{DIM}[t]{RESET} tips")
-    opts.append(f"{DIM}[Enter]{RESET} back")
+        opts.append(f"{c(DIM, '[v]')} ports")
+    opts.append(f"{c(DIM, '[t]')} tips")
+    opts.append(f"{c(DIM, '[Enter]')} back")
     hint = " ".join(opts)
     print(f"  {hint}")
 
@@ -352,7 +351,7 @@ def _detail_prompt(conn: dict, elevations: dict, layouts: dict):
             for lk in halls:
                 layout = layouts.get(lk)
                 if not layout:
-                    print(f"  {DIM}No layout for {lk}{RESET}")
+                    print(f"  {c(DIM, f'No layout for {lk}')}")
                     continue
                 ha = rack_a if (src_dh == lk or src_dh is None) else None
                 hb = rack_b if (dest_dh == lk or dest_dh is None) else None
@@ -366,10 +365,10 @@ def _detail_prompt(conn: dict, elevations: dict, layouts: dict):
         elif sl == "t":
             tips = _get_tips(conn, elevations)
             if tips:
-                print(f"\n  {BOLD}Steps:{RESET}")
+                print(f"\n  {c(BOLD, 'Steps:')}")
                 for i, (label, cmd) in enumerate(tips, 1):
-                    print(f"    {DIM}{i}.{RESET} {label}")
-                    print(f"       {CYAN}{cmd}{RESET}")
+                    print(f"    {c(DIM, f'{i}.')} {label}")
+                    print(f"       {c(CYAN, cmd)}")
                 print()
             print(f"  {hint}")
         else:
@@ -401,43 +400,42 @@ def _clear():
 
 def _run(xlsx_path: str):
     _clear()
-    print(f"\n  {DIM}Loading data...{RESET}", end="", flush=True)
+    print(f"\n  {c(DIM, 'Loading data...')}", end="", flush=True)
     connections, elevations, site, data_halls = _load_data(xlsx_path)
     layouts = _load_layouts_for_halls(data_halls, elevations)
     _clear()
 
-    # Build header
     site_label = site or os.path.basename(xlsx_path).replace(".xlsx", "")
     missing_layouts = [dh for dh in data_halls if dh not in layouts]
 
-    print(f"\n  {BOLD}IB Lookup{RESET}  {DIM}{site_label} · {len(connections):,} connections · {len(data_halls)} halls{RESET}")
+    print(f"\n  {c(BOLD, 'IB Lookup')}  {c(DIM, f'{site_label} · {len(connections):,} connections · {len(data_halls)} halls')}")
     if missing_layouts:
-        print(f"  {YELLOW}Missing floor layouts:{RESET} {', '.join(missing_layouts)}")
-        print(f"  {DIM}Add them to ~/.datahall/layouts.json or run the datahall-map-creator skill{RESET}")
-    print(f"  {DIM}Search any switch — example: S5.3.1, L10, C1.15 20/2{RESET}\n")
+        print(f"  {c(YELLOW, 'Missing floor layouts:')} {', '.join(missing_layouts)}")
+        print(f"  {c(DIM, 'Add them to ~/.datahall/layouts.json or run the datahall-map-creator skill')}")
+    print(f"  {c(DIM, 'Search any switch — example: S5.3.1, L10, C1.15 20/2')}\n")
 
     while True:
-        query = _prompt(f"{BOLD}Search:{RESET} ")
+        query = _prompt(f"{c(BOLD, 'Search:')} ")
 
         if query in ("q", "quit", "exit"):
             break
         if query == "?":
-            print(f"\n  {BOLD}Examples:{RESET}")
-            print(f"    S5.3.1       {DIM}— spine switch{RESET}")
-            print(f"    L10          {DIM}— all leaf switches in cab 10{RESET}")
-            print(f"    C1.15 20/2   {DIM}— core switch + specific port{RESET}")
-            print(f"    8.3.2        {DIM}— auto-detects type{RESET}")
-            print(f"    q            {DIM}— quit{RESET}\n")
+            print(f"\n  {c(BOLD, 'Examples:')}")
+            print(f"    S5.3.1       {c(DIM, '— spine switch')}")
+            print(f"    L10          {c(DIM, '— all leaf switches in cab 10')}")
+            print(f"    C1.15 20/2   {c(DIM, '— core switch + specific port')}")
+            print(f"    8.3.2        {c(DIM, '— auto-detects type')}")
+            print(f"    q            {c(DIM, '— quit')}\n")
             continue
         if not query:
             continue
 
         results = search(connections, query)
         if not results:
-            print(f"  {DIM}No matches for '{query}'{RESET}\n")
+            print(f"  {c(DIM, 'No matches for ' + repr(query))}\n")
             continue
 
-        print(f"\n  {BOLD}{query}{RESET} — {len(results)} match{'es' if len(results) != 1 else ''}\n")
+        print(f"\n  {c(BOLD, query)} — {len(results)} match{'es' if len(results) != 1 else ''}\n")
         for idx, conn in enumerate(results, 1):
             _print_result(conn, idx)
 
@@ -447,7 +445,7 @@ def _run(xlsx_path: str):
             _flush_stdin()
             continue
 
-        print(f"\n  {DIM}Enter a number for details, or just search again{RESET}")
+        print(f"\n  {c(DIM, 'Enter a number for details, or just search again')}")
         sel = _prompt()
         if sel in ("q", "quit", "exit"):
             break
@@ -458,7 +456,7 @@ def _run(xlsx_path: str):
                 _detail_prompt(results[n], elevations, layouts)
                 _flush_stdin()
             else:
-                print(f"  {DIM}Pick 1–{len(results)}{RESET}")
+                print(f"  {c(DIM, f'Pick 1–{len(results)}')}")
 
 
 # ════════════════════════════════════════════════════════════════
@@ -466,15 +464,18 @@ def _run(xlsx_path: str):
 # ════════════════════════════════════════════════════════════════
 
 def main():
+    # Auto-detect trad mode when invoked as 'trad-lookup'
+    invoked_as_trad = os.path.basename(sys.argv[0]).startswith("trad")
+
     parser = argparse.ArgumentParser(
-        prog="ib-lookup",
-        description="IB Lookup — search InfiniBand switch connections at any site",
+        prog="trad-lookup" if invoked_as_trad else "ib-lookup",
+        description="Switch Lookup — search IB and traditional networking connections at any site",
     )
     parser.add_argument("query", nargs="?", default=None,
                         help="Switch name to search (e.g. L10, S5.3, C1.4)")
     parser.add_argument("--file", "-f", default=None,
-                        help="Path to IB Sketch .xlsx file")
-    parser.add_argument("--trad", action="store_true",
+                        help="Path to .xlsx file")
+    parser.add_argument("--trad", action="store_true", default=invoked_as_trad,
                         help="Traditional networking mode (MASTER cutsheet)")
     parser.add_argument("--import-overhead", metavar="CSV",
                         help="Import overhead CSV to generate floor layouts")
@@ -488,7 +489,7 @@ def main():
         success = import_overhead(args.import_overhead)
         sys.exit(0 if success else 1)
 
-    # Handle --trad
+    # Handle --trad (or trad-lookup invocation)
     if args.trad:
         from ib_lookup.trad_cli import run_trad
         run_trad(file_arg=args.file)
@@ -496,23 +497,22 @@ def main():
 
     xlsx_path = _find_xlsx(args.file)
     if not xlsx_path:
-        print(f"\n  {RED}{BOLD}No IB Sketch .xlsx found{RESET}")
-        print(f"\n  {BOLD}Options:{RESET}")
+        print(f"\n  {c(RED+BOLD, 'No IB Sketch .xlsx found')}")
+        print(f"\n  {c(BOLD, 'Options:')}")
         print(f"    1. Place your IB Sketch .xlsx in the current directory")
-        print(f"    2. Run with: {CYAN}ib-lookup --file /path/to/sketch.xlsx{RESET}")
-        print(f"    3. Import a floor layout: {CYAN}ib-lookup --import-overhead overhead.csv{RESET}")
-        print(f"\n  {DIM}The file should have Pull Schedule and ELEV tabs.{RESET}")
+        print(f"    2. Run with: {c(CYAN, 'ib-lookup --file /path/to/sketch.xlsx')}")
+        print(f"    3. Import a floor layout: {c(CYAN, 'ib-lookup --import-overhead overhead.csv')}")
+        print(f"\n  {c(DIM, 'The file should have Pull Schedule and ELEV tabs.')}")
         sys.exit(1)
 
-    print(f"  {GREEN}Found:{RESET} {os.path.basename(xlsx_path)}")
-
     if args.query:
+        # One-shot mode — silent, just results
         connections, elevations, site, data_halls = _load_data(xlsx_path)
         results = search(connections, args.query)
         if not results:
-            print(f"  {DIM}No matches for '{args.query}'{RESET}")
+            print(f"  {c(DIM, 'No matches for ' + repr(args.query))}")
             return
-        print(f"\n  {BOLD}{args.query}{RESET} — {len(results)} matches\n")
+        print(f"\n  {c(BOLD, args.query)} — {len(results)} matches\n")
         for idx, conn in enumerate(results, 1):
             _print_result(conn, idx)
         if len(results) == 1:
@@ -520,6 +520,7 @@ def main():
         print()
         return
 
+    print(f"  {c(GREEN, 'Found:')} {os.path.basename(xlsx_path)}")
     _run(xlsx_path)
 
 
