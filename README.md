@@ -18,11 +18,10 @@
 
 | File | What it is | Where to find it | Required? |
 |------|-----------|-------------------|-----------|
-| **IB Sketch** (`.xlsx`) | InfiniBand connection list — pull schedules, elevations, port mappings | Your site's shared Google Drive. Ask your site lead or DCT team. | For IB mode |
-| **MASTER Cutsheet** (`.xlsx`) | Traditional networking — device list, cutsheet connections, rack positions | Same shared drive. Has SITE-HOSTS, CUTSHEET, and OVERHEAD tabs. | For trad mode |
-| **Overhead** (`.csv`) | Physical rack layout — rack numbers, positions, data hall structure | Export the OVERHEAD tab from the MASTER cutsheet as CSV. | For floor maps (both modes) |
+| **IB Sketch** (`.xlsx`) | InfiniBand fabric connections — pull schedules, elevations, port mappings | Your site's shared Google Drive. Ask your site lead or DCT team. | For IB mode |
+| **MASTER Cutsheet** (`.xlsx`) | Traditional networking + physical rack layout. Contains SITE-HOSTS (devices), CUTSHEET (connections), and OVERHEAD (floor plan) tabs. | Same shared drive — every site has one. | For trad mode + floor maps |
 
-> **Note:** These are different sheets. The IB Sketch has **IB fabric connections** (Spine/Core/Leaf/Node). The MASTER cutsheet has **traditional networking** (TOR, infra, frontend — swp/eth ports). The overhead is just the physical floor plan — used to generate floor maps for both modes.
+> **Note:** Two files, two purposes. The **IB Sketch** has IB fabric connections (Spine/Core/Leaf/Node). The **MASTER cutsheet** has traditional networking (TOR, infra, frontend — swp/eth ports) and the OVERHEAD tab with the physical rack layout. To get floor maps working, export the OVERHEAD tab from the MASTER cutsheet as CSV and run `--import-overhead`.
 
 <br>
 
@@ -66,9 +65,9 @@ Search, elevations, and port diagrams work out of the box. **Floor maps** need y
 
 <img src="assets/step-overhead.svg" alt="Import overhead to get floor maps" width="700">
 
-### Option A: Import from overhead CSV (recommended)
+### Option A: Import from MASTER cutsheet (recommended)
 
-Export the OVERHEAD tab from your MASTER cutsheet as CSV, then:
+Open your MASTER cutsheet in Google Sheets, go to the **OVERHEAD** tab, then **File > Download > CSV**:
 
 ```bash
 ib-lookup --import-overhead your-site-overhead.csv
