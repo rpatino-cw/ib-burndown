@@ -1,12 +1,16 @@
 <div align="center">
   <img src="assets/banner.png" alt="ib-lookup" width="600">
   <br><br>
-  <b>Search any IB switch at any site from your terminal.</b>
+  <b>One tool for all switch lookups — IB and traditional networking.</b>
   <br>
-  Drop in your IB Sketch, get ports, cables, racks, elevations, and floor maps.
+  Drop in your spreadsheet, search any switch, get maps, elevations, ports, and tips.
   <br><br>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/rpatino-cw/ib-burndown?style=flat-square" alt="License"></a>
 </div>
+
+<br>
+
+<img src="assets/modes.svg" alt="Two modes: IB and Traditional" width="700">
 
 <br>
 
@@ -14,14 +18,15 @@
 
 | File | What it is | Where to find it | Required? |
 |------|-----------|-------------------|-----------|
-| **IB Sketch** (`.xlsx`) | InfiniBand connection list — pull schedules, elevations, port mappings | Your site's shared Google Drive. Ask your site lead or DCT team. Download as **File > Download > Microsoft Excel (.xlsx)** | Yes |
-| **Overhead** (`.csv`) | Physical rack layout — rack numbers, positions, data hall structure | Your site's shared Google Drive. Same place as the IB Sketch — it's the floor plan view. Download as **File > Download > CSV** | Only for floor maps |
+| **IB Sketch** (`.xlsx`) | InfiniBand connection list — pull schedules, elevations, port mappings | Your site's shared Google Drive. Ask your site lead or DCT team. | For IB mode |
+| **MASTER Cutsheet** (`.xlsx`) | Traditional networking — device list, cutsheet connections, rack positions | Same shared drive. Has SITE-HOSTS, CUTSHEET, and OVERHEAD tabs. | For trad mode |
+| **Overhead** (`.csv`) | Physical rack layout — rack numbers, positions, data hall structure | Export the OVERHEAD tab from the MASTER cutsheet as CSV. | For floor maps (both modes) |
 
-> **Note:** These are two different sheets. The IB Sketch has **IB fabric connections** (source/destination/port/cable). The Overhead has the **physical rack layout** (which rack sits where on the floor). This tool is IB-only — the overhead is just used to generate the floor map.
+> **Note:** These are different sheets. The IB Sketch has **IB fabric connections** (Spine/Core/Leaf/Node). The MASTER cutsheet has **traditional networking** (TOR, infra, frontend — swp/eth ports). The overhead is just the physical floor plan — used to generate floor maps for both modes.
 
 <br>
 
-## Quick start (3 steps)
+## Quick start
 
 ### 1. Install
 
@@ -36,53 +41,44 @@ git clone -b experimental/v2-merge https://github.com/rpatino-cw/ib-burndown.git
 cd ib-burndown && bash run.sh
 ```
 
-### 2. Add your site's IB Sketch
+### 2. Add your data
 
-Download your site's IB Sketch as `.xlsx` from Google Sheets:
+<img src="assets/step-download.svg" alt="Download your IB Sketch from Google Sheets" width="700">
 
-1. Open your site's IB Sketch in Google Sheets
+1. Open your site's **IB Sketch** (or **MASTER cutsheet**) in Google Sheets
 2. **File > Download > Microsoft Excel (.xlsx)**
-3. Move the file into the `ib-burndown/` folder (or anywhere — you can point to it with `--file`)
-
-The file needs **Pull Schedule** tabs (connections) and **ELEV** tabs (rack positions). Most IB Sketches already have these.
+3. Move the `.xlsx` into the `ib-burndown/` folder — or point to it with `--file`
 
 ### 3. Run
 
 ```bash
-ib-lookup
+ib-lookup                # InfiniBand mode (IB Sketch)
+ib-lookup --trad         # traditional networking mode (MASTER cutsheet)
 ```
 
-That's it. The app reads your `.xlsx`, auto-detects the site name, data halls, and all connections. Search works immediately — type any switch name.
+That's it. The app reads your file, auto-detects the site, data halls, and connections. Search works immediately.
 
 <br>
 
-## Set up floor maps (optional but recommended)
+## Set up floor maps
 
-Search, elevations, and port diagrams work out of the box. **Floor maps** need one extra step — your site's rack layout.
+Search, elevations, and port diagrams work out of the box. **Floor maps** need your site's rack layout — one extra step.
+
+<img src="assets/step-overhead.svg" alt="Import overhead to get floor maps" width="700">
 
 ### Option A: Import from overhead CSV (recommended)
 
-If your site has an overhead document (the spreadsheet with the physical rack layout), export it as CSV and run:
+Export the OVERHEAD tab from your MASTER cutsheet as CSV, then:
 
 ```bash
 ib-lookup --import-overhead your-site-overhead.csv
 ```
 
-The parser auto-detects:
-- Rack number rows and column groupings
-- Serpentine vs linear rack ordering
-- Data hall boundaries (DH1, DH2, etc.)
-- Multi-column layouts (Left/Right splits)
+Auto-detects rack columns, serpentine patterns, data halls, and row counts. Writes to `~/.datahall/layouts.json`. No questions.
 
-It writes the result to `~/.datahall/layouts.json`. No questions, no manual input.
+### Option B: Manual config
 
-**Where to get the overhead CSV:**
-- Google Sheets: open the overhead > **File > Download > CSV**
-- Ask your site lead or DCT team — most sites have one in the shared drive
-
-### Option B: Manual config (if no overhead exists)
-
-Create `~/.datahall/layouts.json` with your hall dimensions:
+Create `~/.datahall/layouts.json` with 3 numbers per column:
 
 ```json
 {
@@ -97,22 +93,20 @@ Create `~/.datahall/layouts.json` with your hall dimensions:
 }
 ```
 
-You need three numbers per column: **start rack**, **number of rows**, and **racks per row**. Ask anyone who knows the hall layout.
-
-### Verify it works
-
-After either option, run `ib-lookup`, search a switch, and press `m` for the floor map.
+After either option, search a switch and press `m` for the floor map.
 
 <br>
 
 ## Usage
 
 ```
-ib-lookup                           # interactive search
-ib-lookup S5.3.1                    # one-shot search
-ib-lookup "C1.15 20/2"              # search + port filter
-ib-lookup --file path/to/sketch.xlsx  # specify xlsx location
-ib-lookup --import-overhead site.csv  # import floor layout from CSV
+ib-lookup                              # IB interactive search
+ib-lookup S5.3.1                       # IB one-shot search
+ib-lookup "C1.15 20/2"                 # IB search + port filter
+ib-lookup --trad                       # traditional networking search
+ib-lookup --trad --file MASTER.xlsx    # trad with specific file
+ib-lookup --import-overhead site.csv   # import floor layout
+ib-lookup --file path/to/sketch.xlsx   # specify xlsx location
 ```
 
 **Inside a search result, press:**
@@ -120,8 +114,8 @@ ib-lookup --import-overhead site.csv  # import floor layout from CSV
 | Key | What it shows |
 |-----|--------------|
 | `m` | Floor map with highlighted racks |
-| `e` | Rack elevation (RU positions) |
-| `v` | Port faceplate diagram |
+| `e` | Rack elevation (RU positions, full device inventory in trad mode) |
+| `v` | Port faceplate diagram (IB mode) |
 | `t` | DCT troubleshooting steps |
 | `Enter` | Back to search |
 
@@ -139,7 +133,7 @@ ib-lookup --import-overhead site.csv  # import floor layout from CSV
 
 <br>
 
-## Port diagram — `v`
+## Port diagram — `v` (IB mode)
 
 <img src="assets/demo-search.gif" alt="Search and port diagram" width="600">
 
@@ -153,18 +147,20 @@ ib-lookup --import-overhead site.csv  # import floor layout from CSV
 
 ## How it works
 
-The app has zero hardcoded site references. Everything is detected from your data:
+Zero hardcoded site references. Everything is detected from your data:
 
 | What | How it's detected |
 |------|------------------|
-| Site name | Sheet names, fabric IDs in the Excel |
-| Data halls | Tab names containing DH1, DH2, etc. |
-| Connections | Any tab with "Pull Schedule" in the name |
-| Elevations | Any tab with "ELEV" in the name + Leaf Pull Schedule tabs |
+| Site name | Sheet names, fabric IDs, DNS hostnames |
+| Data halls | Tab names (DH1, DH2), location strings (dh2:130:44) |
+| IB connections | Any tab with "Pull Schedule" in the name |
+| Trad connections | CUTSHEET tab with swp/eth ports |
+| Devices | SITE-HOSTS tab with DNS, model, location |
+| Elevations | ELEV tabs (IB) or SITE-HOSTS rack inventory (trad) |
 | Rack layouts | Imported from overhead CSV or `~/.datahall/layouts.json` |
 
 <br>
 
 ---
 
-Fork, PR, no xlsx files (internal data). [MIT](LICENSE)
+Works at any site. Fork, PR, no xlsx files (internal data). [MIT](LICENSE)

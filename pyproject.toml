@@ -17,3 +17,4 @@ include = ["ib_lookup*"]
 
 [project.scripts]
 ib-lookup = "ib_lookup.cli:main"
+trad-lookup = "ib_lookup.cli:main"
